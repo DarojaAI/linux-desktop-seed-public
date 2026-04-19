@@ -112,12 +112,17 @@ get_channel_id_by_name() {
 main() {
     local owner repo
 
+    # Notification settings: set SKIP_NOTIFICATIONS=true to disable
+    : "${SKIP_NOTIFICATIONS:=false}"
+
     # Parse and validate repo
     local parsed
     parsed=$(parse_repo "$REPO")
     if [[ -z "$parsed" ]]; then
-        send_discord "❌ Invalid repository format: $REPO. Use owner/repo or full GitHub URL"
         log_error "Invalid repository format: $REPO"
+        if [[ "${SKIP_NOTIFICATIONS:-false}" != "true" ]]; then
+            send_discord "❌ Invalid repository format: $REPO. Use owner/repo or full GitHub URL"
+        fi
         exit 1
     fi
 
@@ -131,19 +136,21 @@ main() {
     fi
 
     # Determine target directory - use desktopuser's home if root (OpenCLAW runs as desktopuser)
-local target_user_home
-if [[ "$(id -u)" == "0" ]] && id desktopuser &>/dev/null; then
-    target_user_home="/home/desktopuser"
-else
-    target_user_home="$HOME"
-fi
-local target_dir="$target_user_home/repos/$owner/$repo"
+    local target_user_home
+    if [[ "$(id -u)" == "0" ]] && id desktopuser &>/dev/null; then
+        target_user_home="/home/desktopuser"
+    else
+        target_user_home="$HOME"
+    fi
+    local target_dir="$target_user_home/repos/$owner/$repo"
 
     # Check if already exists (idempotency)
     if [[ -d "$target_dir" ]]; then
         local message="ℹ️ Repository already deployed: $owner/$repo\nLocation: $target_dir"
-        send_discord "ℹ️ Repository already deployed: $owner/$repo - Location: $target_dir"
         log_info "$message"
+        if [[ "${SKIP_NOTIFICATIONS:-false}" != "true" ]]; then
+            send_discord "ℹ️ Repository already deployed: $owner/$repo - Location: $target_dir"
+        fi
         exit 0
     fi
 
@@ -154,12 +161,16 @@ local target_dir="$target_user_home/repos/$owner/$repo"
     log_info "Cloning $owner/$repo (branch: $BRANCH) to $target_dir..."
     if git clone --depth 1 -b "$BRANCH" "https://github.com/$owner/$repo.git" "$target_dir" 2>&1; then
         local message="✅ Repository deployed to VM: $owner/$repo ($BRANCH)\nLocation: $target_dir"
-        send_discord "✅ Repository deployed to VM: $owner/$repo ($BRANCH) - Location: $target_dir"
         log_info "$message"
+        if [[ "${SKIP_NOTIFICATIONS:-false}" != "true" ]]; then
+            send_discord "✅ Repository deployed to VM: $owner/$repo ($BRANCH) - Location: $target_dir"
+        fi
     else
         local message="❌ Failed to deploy $owner/$repo: Clone failed"
-        send_discord "❌ Failed to deploy $owner/$repo: Clone failed"
         log_error "$message"
+        if [[ "${SKIP_NOTIFICATIONS:-false}" != "true" ]]; then
+            send_discord "❌ Failed to deploy $owner/$repo: Clone failed"
+        fi
         exit 1
     fi
 }

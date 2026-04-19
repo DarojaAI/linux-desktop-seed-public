@@ -34,7 +34,7 @@ source "$SCRIPT_DIR/scripts/deploy/lib.sh"
 source "$SCRIPT_DIR/scripts/deploy/system.sh"
 source "$SCRIPT_DIR/scripts/deploy/dev-tools.sh"
 source "$SCRIPT_DIR/scripts/deploy/ai-tools.sh"
-source "$SCRIPT_DIR/scripts/deploy/monitoring.sh"
+source "$SCRIPT_DIR/scripts/deploy/desktop-environment.sh"
 source "$SCRIPT_DIR/scripts/deploy/configure.sh"
 
 # Main function
@@ -67,6 +67,11 @@ main() {
         exit 0
     fi
 
+    # Opt-out flags: set SKIP_<GROUP>=true to disable a category
+    # e.g. sudo SKIP_AI_TOOLS=true bash deploy-desktop.sh
+    : "${SKIP_SYSTEM:=false}"  "${SKIP_DEV_TOOLS:=false}"  "${SKIP_AI_TOOLS:=false}"
+    : "${SKIP_CONFIG:=false}"  "${SKIP_MONITORING:=false}"  "${SKIP_OPTIONAL:=false}"
+
     log_info "Starting Remote Desktop Deployment v$SCRIPT_VERSION"
     log_info "Log file: $LOG_FILE"
 
@@ -74,28 +79,31 @@ main() {
     detect_ubuntu_version
 
     # System setup
-    update_system
-    install_gnome
-    configure_xwrapper
-    install_xrdp
-    create_desktop_user
-    copy_desktop_configs
+    if [[ "${SKIP_SYSTEM:-false}" != "true" ]]; then
+        update_system
+        install_gnome
+        configure_xwrapper
+        install_xrdp
+        create_desktop_user
+        copy_desktop_configs
+    fi
 
     # Development tools
-    install_vscode
-    install_claude_code
-    install_claude_skills
-    configure_claude_openrouter
-    install_openrouter
-    install_claude_code_router
-    install_chromium
-    install_ghcli
-    install_bun
-    install_terraform
-    install_gcloud
+    if [[ "${SKIP_DEV_TOOLS:-false}" != "true" ]]; then
+        install_vscode
+        install_claude_code
+        install_claude_skills
+        configure_claude_openrouter
+        install_openrouter
+        install_claude_code_router
+        install_chromium
+        install_ghcli
+        install_bun
+        install_terraform
+        install_gcloud
+    fi
 
-    # AI tools
-    install_openclaw
+install_openclaw
     setup_openclaw_wrapper
     setup_openclaw_config
     setup_openclaw_lock_config
@@ -103,20 +111,38 @@ main() {
     setup_openclaw_backup_config
     setup_openclaw_change_request
     setup_openclaw_systemd_override
+=======
+    # AI tools (OpenCLAW, OpenRouter)
+    if [[ "${SKIP_AI_TOOLS:-false}" != "true" ]]; then
+        install_openclaw
+        setup_openclaw_wrapper
+        setup_openclaw_config
+        setup_openclaw_lock_config
+        setup_openclaw_validate_config
+        setup_openclaw_backup_config
+        setup_openclaw_change_request
+        setup_openclaw_systemd_override
+    fi
 
     # Configuration
-    setup_environment
-    configure_mcp_servers
-    create_desktop_shortcuts
+    if [[ "${SKIP_CONFIG:-false}" != "true" ]]; then
+        setup_environment
+        configure_mcp_servers
+        create_desktop_shortcuts
+    fi
 
     # Monitoring & reliability
-    setup_keyring
-    setup_monitoring
-    setup_gnome_extensions
+    if [[ "${SKIP_MONITORING:-false}" != "true" ]]; then
+        setup_keyring
+        setup_monitoring
+        setup_gnome_extensions
+    fi
 
     # Optional features
-    setup_token_rotation_cron
-    setup_github_issues
+    if [[ "${SKIP_OPTIONAL:-false}" != "true" ]]; then
+        setup_token_rotation_cron
+        setup_github_issues
+    fi
 
     # Validation
     validate_deployment

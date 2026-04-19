@@ -1,0 +1,83 @@
+#!/bin/bash
+# OpenCLAW runtime configuration: config files and systemd override
+# Source this from ai-tools.sh
+
+set -euo pipefail
+
+# Resolve lib.sh from scripts/lib/ (sibling to scripts/install/)
+_lib_sh_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../" && pwd -P)/scripts/deploy"
+# shellcheck source=../deploy/lib.sh
+source "${_lib_sh_dir}/lib.sh"
+
+setup_openclaw_config() {
+    log_step "Setting up OpenCLAW configuration..."
+
+    local target_home
+    target_home=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+    local openclaw_dir="$target_home/.openclaw"
+    local config_file="$openclaw_dir/openclaw.json"
+    local models_file="$openclaw_dir/agents/main/agent/models.json"
+
+    mkdir -p "$openclaw_dir/agents/main/agent"
+
+    if [[ ! -f "$config_file" ]]; then
+        local repo_config="$(dirname "$SCRIPT_DIR")/config/openclaw-defaults.json"
+        if [[ -f "$repo_config" ]]; then
+            cp "$repo_config" "$config_file"
+            log_info "Copied OpenCLAW default config"
+        else
+            cat > "$config_file" << 'EOF'
+{
+  "meta": {
+    "lastTouchedVersion": "2026.04.11"
+  },
+  "agents": {
+    "defaults": {
+      "model": "openrouter/minimax/MiniMax-M2.7",
+      "thinkingDefault": "minimal"
+    }
+  }
+}
+EOF
+            log_info "Created minimal OpenCLAW config"
+        fi
+    else
+        log_info "OpenCLAW config already exists"
+    fi
+
+    if [[ ! -f "$models_file" ]]; then
+        local repo_models="$(dirname "$SCRIPT_DIR")/config/openclaw-models-sample.json"
+        if [[ -f "$repo_models" ]]; then
+            cp "$repo_models" "$models_file"
+            log_info "Copied OpenCLAW models config"
+        fi
+    fi
+
+    chown -R "$TARGET_USER:$TARGET_USER" "$openclaw_dir"
+    log_info "OpenCLAW configuration complete for user $TARGET_USER"
+}
+
+setup_openclaw_systemd_override() {
+    log_step "Setting up OpenCLAW systemd override for API key persistence..."
+
+    local target_home
+    target_home=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+    local override_dir="$target_home/.config/systemd/user/openclaw-gateway.service.d"
+    local override_file="$override_dir/override.conf"
+
+    local api_key="${OPENROUTER_API_KEY:-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}"
+
+    mkdir -p "$override_dir"
+
+    cat > "$override_file" << EOF
+[Service]
+Environment=OPENROUTER_API_KEY=$api_key
+Environment=HOME=/root
+Environment=XDG_RUNTIME_DIR=/run/user/0
+EOF
+
+    chown -R "$TARGET_USER:$TARGET_USER" "$target_home/.config"
+    log_info "OpenCLAW systemd override created at $override_file"
+}
+
+export -f setup_openclaw_config setup_openclaw_systemd_override

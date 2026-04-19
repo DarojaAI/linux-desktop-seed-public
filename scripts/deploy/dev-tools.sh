@@ -4,18 +4,12 @@
 
 set -euo pipefail
 
-# Import common library
-# SCRIPT_DIR is inherited from the main script
-# If not set, detect it
-if [[ -z "${SCRIPT_DIR:-}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-# Resolve lib.sh path relative to THIS script (not inherited SCRIPT_DIR)
+# Resolve lib.sh from scripts/lib/ (sibling to scripts/deploy/)
 _lib_sh_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-if [[ -f "$_lib_sh_dir/lib.sh" ]]; then
-    source "$_lib_sh_dir/lib.sh"
+if [[ -f "${_lib_sh_dir}/lib.sh" ]]; then
+    source "${_lib_sh_dir}/lib.sh"
 else
-    echo "ERROR: Could not find lib.sh in $_lib_sh_dir"
+    echo "ERROR: Could not find lib.sh in ${_lib_sh_dir}"
     exit 1
 fi
 unset _lib_sh_dir
@@ -134,36 +128,6 @@ install_claude_skills() {
     log_info "Claude skills installation skipped (manual installation recommended)"
 }
 
-# Configure Claude Code with OpenRouter
-configure_claude_openrouter() {
-    log_step "Configuring Claude Code with OpenRouter..."
-
-    # Create Claude config directory
-    local claude_dir="$HOME/.config/claude"
-    mkdir -p "$claude_dir"
-
-    # Create or update settings
-    local settings_file="$claude_dir/settings.json"
-    if [[ -f "$settings_file" ]]; then
-        log_info "Claude settings already exist"
-    else
-        cat > "$settings_file" << 'EOF'
-{
-  "apiKey": "OPENROUTER_API_KEY",
-  "model": "openrouter/minimax/MiniMax-M2.7"
-}
-EOF
-        log_info "Created Claude settings with OpenRouter"
-    fi
-
-    # Add to .bashrc for persistence
-    if ! grep -q "OPENROUTER_API_KEY" "$HOME/.bashrc" 2>/dev/null; then
-        echo 'export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"' >> "$HOME/.bashrc"
-    fi
-
-    log_info "Claude OpenRouter configuration complete"
-}
-
 # Install OpenRouter CLI
 install_openrouter() {
     log_step "Installing OpenRouter CLI..."
@@ -174,8 +138,8 @@ install_openrouter() {
         return 0
     fi
 
-    # Install via npm
-    if ! command -v npm &> /dev/null; then
+    # Ensure Node.js is available
+    if ! command -v node &> /dev/null; then
         log_info "Installing Node.js for OpenRouter CLI..."
         if ! apt-get install -y nodejs npm; then
             log_error "Failed to install Node.js"
@@ -420,6 +384,6 @@ install_gcloud() {
 }
 
 # Export functions for use in main script
-export -f install_vscode install_claude_code install_claude_skills configure_claude_openrouter
+export -f install_vscode install_claude_code install_claude_skills
 export -f install_openrouter install_claude_code_router install_chromium install_ghcli
 export -f install_bun install_terraform install_gcloud

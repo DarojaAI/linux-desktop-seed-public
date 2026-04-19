@@ -4,18 +4,12 @@
 
 set -euo pipefail
 
-# Import common library
-# SCRIPT_DIR is inherited from the main script
-# If not set, detect it
-if [[ -z "${SCRIPT_DIR:-}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-# Resolve lib.sh path relative to THIS script (not inherited SCRIPT_DIR)
+# Resolve lib.sh from scripts/lib/ (sibling to scripts/deploy/)
 _lib_sh_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-if [[ -f "$_lib_sh_dir/lib.sh" ]]; then
-    source "$_lib_sh_dir/lib.sh"
+if [[ -f "${_lib_sh_dir}/lib.sh" ]]; then
+    source "${_lib_sh_dir}/lib.sh"
 else
-    echo "ERROR: Could not find lib.sh in $_lib_sh_dir"
+    echo "ERROR: Could not find lib.sh in ${_lib_sh_dir}"
     exit 1
 fi
 unset _lib_sh_dir
@@ -240,6 +234,68 @@ show_summary() {
     echo ""
 }
 
+# Configure X11 wrapper
+configure_xwrapper() {
+    log_step "Configuring X11 wrapper..."
+
+    # Configure X11 to allow any user to start X servers
+    if [[ ! -f /etc/X11/Xwrapper.config ]] || ! grep -q "allowed_users" /etc/X11/Xwrapper.config; then
+        echo "allowed_users=any" > /etc/X11/Xwrapper.config
+        echo "allowed_users=console" >> /etc/X11/Xwrapper.config
+        log_info "Configured X11 wrapper for multi-user access"
+    fi
+
+    # Configure D-Bus to allow system-wide connections
+    if [[ ! -f /etc/dbus-1/system.d/xrdp.conf ]]; then
+        mkdir -p /etc/dbus-1/system.d
+        cat > /etc/dbus-1/system.d/xrdp.conf << 'EOF'
+<!DOCTYPE busconfig PUBLIC
+ "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="root">
+    <allow own="org.freedesktop.Notifications"/>
+  </policy>
+  <policy context="default">
+    <allow send_destination="org.freedesktop.Notifications"/>
+    <allow receive_sender="org.freedesktop.Notifications"/>
+  </policy>
+</busconfig>
+EOF
+        log_info "Configured D-Bus for notifications"
+    fi
+}
+
+# Configure Claude Code with OpenRouter
+configure_claude_openrouter() {
+    log_step "Configuring Claude Code with OpenRouter..."
+
+    # Create Claude config directory
+    local claude_dir="$HOME/.config/claude"
+    mkdir -p "$claude_dir"
+
+    # Create or update settings
+    local settings_file="$claude_dir/settings.json"
+    if [[ -f "$settings_file" ]]; then
+        log_info "Claude settings already exist"
+    else
+        cat > "$settings_file" << 'EOF'
+{
+  "apiKey": "OPENROUTER_API_KEY",
+  "model": "openrouter/minimax/MiniMax-M2.7"
+}
+EOF
+        log_info "Created Claude settings with OpenRouter"
+    fi
+
+    # Add to .bashrc for persistence
+    if ! grep -q "OPENROUTER_API_KEY" "$HOME/.bashrc" 2>/dev/null; then
+        echo 'export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"' >> "$HOME/.bashrc"
+    fi
+
+    log_info "Claude OpenRouter configuration complete"
+}
+
 # Export functions for use in main script
-export -f setup_environment configure_mcp_servers setup_token_rotation_cron
+export -f setup_environment configure_mcp_servers configure_xwrapper configure_claude_openrouter setup_token_rotation_cron
 export -f setup_github_issues validate_deployment show_summary

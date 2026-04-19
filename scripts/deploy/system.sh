@@ -4,19 +4,13 @@
 
 set -euo pipefail
 
-# Import common library
-# SCRIPT_DIR is inherited from the main script
-# If not set, detect it
-if [[ -z "${SCRIPT_DIR:-}" ]]; then
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-
-# Resolve lib.sh path relative to THIS script (not inherited SCRIPT_DIR)
+# Resolve lib.sh from scripts/lib/ (sibling to scripts/deploy/)
+# Use BASH_SOURCE so this works regardless of how the script is invoked
 _lib_sh_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-if [[ -f "$_lib_sh_dir/lib.sh" ]]; then
-    source "$_lib_sh_dir/lib.sh"
+if [[ -f "${_lib_sh_dir}/lib.sh" ]]; then
+    source "${_lib_sh_dir}/lib.sh"
 else
-    echo "ERROR: Could not find lib.sh in $_lib_sh_dir"
+    echo "ERROR: Could not find lib.sh in ${_lib_sh_dir}"
     exit 1
 fi
 unset _lib_sh_dir
@@ -122,40 +116,6 @@ install_gnome() {
         sed -i 's/^Exec=gnome-text-editor/Exec=env DISPLAY=:16 gnome-text-editor/' /usr/share/applications/org.gnome.TextEditor.desktop
     fi
 }
-
-# Configure X11 wrapper
-configure_xwrapper() {
-    log_step "Configuring X11 wrapper..."
-
-    # Configure X11 to allow any user to start X servers
-    if [[ ! -f /etc/X11/Xwrapper.config ]] || ! grep -q "allowed_users" /etc/X11/Xwrapper.config; then
-        echo "allowed_users=any" > /etc/X11/Xwrapper.config
-        echo "allowed_users=console" >> /etc/X11/Xwrapper.config
-        log_info "Configured X11 wrapper for multi-user access"
-    fi
-
-    # Configure D-Bus to allow system-wide connections
-    if [[ ! -f /etc/dbus-1/system.d/xrdp.conf ]]; then
-        mkdir -p /etc/dbus-1/system.d
-        cat > /etc/dbus-1/system.d/xrdp.conf << 'EOF'
-<!DOCTYPE busconfig PUBLIC
- "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
- "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
-<busconfig>
-  <policy user="root">
-    <allow own="org.freedesktop.Notifications"/>
-  </policy>
-  <policy context="default">
-    <allow send_destination="org.freedesktop.Notifications"/>
-    <allow receive_sender="org.freedesktop.Notifications"/>
-  </policy>
-</busconfig>
-EOF
-        log_info "Configured D-Bus for notifications"
-    fi
-}
-
-# Install xrdp
 install_xrdp() {
     log_step "Installing xrdp..."
 

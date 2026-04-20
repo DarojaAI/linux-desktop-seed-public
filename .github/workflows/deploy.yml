@@ -40,6 +40,9 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    env:
+      HETZNER_API_TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
     steps:
       - name: Checkout
@@ -68,8 +71,8 @@ jobs:
         run: |
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
-            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
-            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
+            -var="hcloud_token=${{ env.HETZNER_API_TOKEN }}" \
+            -var="ssh_private_key=${{ env.SSH_PRIVATE_KEY }}" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
 
@@ -79,8 +82,8 @@ jobs:
         run: |
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \
-            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
-            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
+            -var="hcloud_token=${{ env.HETZNER_API_TOKEN }}" \
+            -var="ssh_private_key=${{ env.SSH_PRIVATE_KEY }}" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
 
@@ -90,7 +93,7 @@ jobs:
         run: |
           cd ${{ env.TERRAFORM_DIR }}
           terraform destroy -input=false -auto-approve \
-            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}"
+            -var="hcloud_token=${{ env.HETZNER_API_TOKEN }}"
 
       - name: Set outputs for apply
         if: github.event.inputs.action == 'apply'

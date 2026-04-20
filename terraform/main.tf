@@ -10,6 +10,10 @@ terraform {
       source  = "hetznercloud/hcloud"
       version = "~> 1.46"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
+    }
   }
 }
 
@@ -66,8 +70,8 @@ variable "public_ipv4_enabled" {
 variable "labels" {
   description = "Labels to apply to resources"
   type        = map(string)
-  default     = {
-    project = "linux-desktop-seed"
+  default = {
+    project    = "linux-desktop-seed"
     managed_by = "terraform"
   }
 }
@@ -82,32 +86,27 @@ resource "hcloud_server" "main" {
   location    = var.location
   image       = var.image
 
-  # SSH keys
-  dynamic "ssh_keys" {
-    for_each = var.ssh_keys
-    content {
-      name = ssh_keys.value
-    }
-  }
-
-  # Network configuration
-  public_net {
-    enabled = var.public_ipv4_enabled
-  }
+  # SSH keys - use directly, not dynamic block
+  ssh_keys = var.ssh_keys
 
   labels = var.labels
+}
 
-  # Wait for server to be ready (only if SSH key provided)
+# Conditional provisioner resource
+resource "null_resource" "server_ready" {
+  count = var.ssh_private_key != "" ? 1 : 0
+
+  triggers = {
+    server_id = hcloud_server.main.id
+  }
+
   provisioner "remote-exec" {
-    count = var.ssh_private_key != "" ? 1 : 0
-    inline = [
-      "echo 'Server ready'"
-    ]
+    inline = ["echo 'Server ready'"]
 
     connection {
       type        = "ssh"
       user        = "root"
-      host        = self.ipv4_address
+      host        = hcloud_server.main.ipv4_address
       private_key = var.ssh_private_key
       timeout     = "10m"
     }

@@ -49,7 +49,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-          cli_config_credentials_token: ${{ secrets.HETZNER_API_TOKEN }}
 
       - name: Setup SSH key
         run: |
@@ -73,7 +72,6 @@ jobs:
             -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
-        continue-on-error: true
 
       - name: Terraform Apply
         id: apply

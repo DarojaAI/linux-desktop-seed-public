@@ -69,6 +69,12 @@ jobs:
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
+          echo "=== Debug: Checking secrets ==="
+          echo "HETZNER_API_TOKEN length: ${#HETZNER_API_TOKEN}"
+          echo "SSH_PRIVATE_KEY length: ${#SSH_PRIVATE_KEY}"
+          echo "HETZNER_LOCATION: $HETZNER_LOCATION"
+          echo "SERVER_TYPE: $SERVER_TYPE"
+          echo "==========================="
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
             -var="hcloud_token=${{ env.HETZNER_API_TOKEN }}" \

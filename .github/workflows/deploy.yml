@@ -89,20 +89,18 @@ jobs:
       - name: Destroy server
         if: github.event.inputs.action == 'destroy'
         run: |
-          # Install hcloud CLI
-          curl -sL https://github.com/hetznercloud/cli/releases/download/v1.62.2/hcloud-cli_1.62.2_linux_amd64.tar.gz -o hcloud.tar.gz
-          tar -xzf hcloud.tar.gz
-          chmod +x hcloud
+          # Install hcloud CLI via apt
+          sudo apt-get update && sudo apt-get install -y hcloud-cli
           export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
 
           # List servers
-          ./hcloud server list -o json
+          hcloud server list -o json
 
           # Delete servers
-          SERVER_ID=$(./hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)
+          SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)
           if [ -n "$SERVER_ID" ]; then
             echo "Deleting server: $SERVER_ID"
-            ./hcloud server delete "$SERVER_ID"
+            hcloud server delete "$SERVER_ID"
             echo "Server deleted successfully"
           else
             echo "No linux-desktop servers found to delete"

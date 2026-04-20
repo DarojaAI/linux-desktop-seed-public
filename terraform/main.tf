@@ -10,10 +10,6 @@ terraform {
       source  = "hetznercloud/hcloud"
       version = "~> 1.46"
     }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.2"
-    }
   }
 }
 
@@ -92,26 +88,7 @@ resource "hcloud_server" "main" {
   labels = var.labels
 }
 
-# Conditional provisioner resource
-resource "null_resource" "server_ready" {
-  count = var.ssh_private_key != "" ? 1 : 0
-
-  triggers = {
-    server_id = hcloud_server.main.id
-  }
-
-  provisioner "remote-exec" {
-    inline = ["echo 'Server ready'"]
-
-    connection {
-      type        = "ssh"
-      user        = "root"
-      host        = hcloud_server.main.ipv4_address
-      private_key = var.ssh_private_key
-      timeout     = "10m"
-    }
-  }
-}
+# Server created - deployment script will handle further setup
 
 # =============================================================================
 # Outputs

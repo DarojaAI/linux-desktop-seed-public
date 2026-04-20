@@ -66,16 +66,9 @@ jobs:
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
-          echo "=== Debug: Checking environment ==="
-          echo "HETZNER_API_TOKEN length: ${#HETZNER_API_TOKEN}"
-          echo "SSH_PRIVATE_KEY length: ${#SSH_PRIVATE_KEY}"
-          echo "HETZNER_LOCATION: $HETZNER_LOCATION"
-          echo "SERVER_TYPE: $SERVER_TYPE"
-          echo "==========================="
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
-            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
 
@@ -86,7 +79,6 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
-            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
 

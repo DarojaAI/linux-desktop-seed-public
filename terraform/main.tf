@@ -56,6 +56,12 @@ variable "ssh_keys" {
   default     = []
 }
 
+variable "hetzner_ssh_key_name" {
+  description = "Name of SSH key in Hetzner"
+  type        = string
+  default     = ""
+}
+
 variable "labels" {
   description = "Labels to apply to resources"
   type        = map(string)
@@ -76,7 +82,7 @@ resource "hcloud_server" "main" {
   image       = var.image
 
   # SSH keys - use directly, not dynamic block
-  ssh_keys = var.ssh_keys
+  ssh_keys = var.hetzner_ssh_key_name != "" ? [var.hetzner_ssh_key_name] : var.ssh_keys
 
   labels = var.labels
 }

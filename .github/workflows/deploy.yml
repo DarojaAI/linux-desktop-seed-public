@@ -92,7 +92,8 @@ jobs:
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
             -var="server_name=$SERVER_NAME" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
-            -var="server_type=${{ vars.SERVER_TYPE }}"
+            -var="server_type=${{ vars.SERVER_TYPE }}" \
+            -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}"
 
       - name: Terraform Apply
         id: apply
@@ -104,7 +105,8 @@ jobs:
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
             -var="server_name=$SERVER_NAME" \
             -var="location=${{ vars.HETZNER_LOCATION }}" \
-            -var="server_type=${{ vars.SERVER_TYPE }}"
+            -var="server_type=${{ vars.SERVER_TYPE }}" \
+            -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}"
 
       - name: Destroy server
         if: github.event.inputs.action == 'destroy'

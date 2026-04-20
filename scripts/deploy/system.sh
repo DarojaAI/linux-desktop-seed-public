@@ -177,14 +177,8 @@ create_desktop_user() {
         return 0
     fi
 
-    # Get current user for sudo group
-    local sudo_group="sudo"
-    if grep -q "admin" /etc/group; then
-        sudo_group="admin"
-    fi
-
     # Create user with home directory and bash shell
-    useradd -m -s /bin/bash -G "$sudo_group" "$username"
+    useradd -m -s /bin/bash -G sudo "$username"
 
     # Set default password (change in production!)
     echo "$username:desktop" | chpasswd

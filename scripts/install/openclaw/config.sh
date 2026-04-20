@@ -47,10 +47,28 @@ EOF
 
     if [[ ! -f "$models_file" ]]; then
         local repo_models="$(dirname "$SCRIPT_DIR")/config/openclaw-models-sample.json"
-        if [[ -f "$repo_models" ]]; then
+        if [[ -f "$repo_models" ]; then
             cp "$repo_models" "$models_file"
             log_info "Copied OpenCLAW models config"
         fi
+    fi
+
+    # Copy workspace AGENTS.md (global agent instructions)
+    local repo_agents="$(dirname "$SCRIPT_DIR")/config/openclaw/workspace/AGENTS.md"
+    local target_agents="$openclaw_dir/workspace/AGENTS.md"
+    if [[ -f "$repo_agents" && ! -f "$target_agents" ]]; then
+        mkdir -p "$openclaw_dir/workspace"
+        cp "$repo_agents" "$target_agents"
+        log_info "Copied OpenCLAW workspace AGENTS.md"
+    fi
+
+    # Copy skills (session-commands, etc.)
+    local repo_skills_dir="$(dirname "$SCRIPT_DIR")/config/openclaw/skills"
+    local target_skills_dir="$openclaw_dir/skills"
+    if [[ -d "$repo_skills_dir" ]]; then
+        mkdir -p "$target_skills_dir"
+        cp -r "$repo_skills_dir"/* "$target_skills_dir/" 2>/dev/null || true
+        log_info "Copied OpenCLAW skills"
     fi
 
     chown -R "$TARGET_USER:$TARGET_USER" "$openclaw_dir"

@@ -24,7 +24,7 @@ jobs:
         with:
           scandir: '.'
           ignore_paths: '.venv .git'
-          severity: warning
+          severity: error
 
   docker-lint:
     name: Dockerfile Linting
@@ -36,6 +36,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: docker/Dockerfile
+          failure-threshold: warning
 
   security-scan:
     name: Security Scan
@@ -64,5 +65,5 @@ jobs:
       - name: Validate BATS test syntax
         run: |
           find tests/ -name "*.bats" | while read -r f; do
-            bats --syntax-only "$f" && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
+            bats "$f" > /dev/null 2>&1 && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
           done

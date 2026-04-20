@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Node.js 20.x
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs=20.* \
+    && apt-get install -y --no-install-recommends nodejs=20.* \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

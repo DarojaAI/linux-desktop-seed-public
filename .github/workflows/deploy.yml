@@ -202,14 +202,14 @@ jobs:
           wc -c < ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Copy deployment script
+      - name: Copy deployment script and modules
         run: |
-          scp -o StrictHostKeyChecking=no deploy-desktop.sh root@${{ env.SERVER_IP }}:/tmp/
+          scp -o StrictHostKeyChecking=no -r deploy-desktop.sh scripts root@${{ env.SERVER_IP }}:/tmp/
 
       - name: Run deployment
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            'bash /tmp/deploy-desktop.sh'
+            'cd /tmp && bash deploy-desktop.sh'
 
       - name: Show connection info
         run: |

@@ -86,27 +86,21 @@ jobs:
             -var="location=${{ vars.HETZNER_LOCATION }}" \
             -var="server_type=${{ vars.SERVER_TYPE }}"
 
-      - name: Install hcloud CLI
+      - name: Destroy server
         if: github.event.inputs.action == 'destroy'
         run: |
+          # Install hcloud CLI
           curl -sSf https://raw.githubusercontent.com/hetznercloud/cli/master/install.sh | sh
-          echo "$HOME/.hcloud/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.hcloud/bin:$PATH"
+          export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
 
-      - name: List servers
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          ~/.hcloud/bin/hcloud server list -o json
-
-      - name: Terraform Destroy
-        id: destroy
-        if: github.event.inputs.action == 'destroy'
-        run: |
-          cd ${{ env.TERRAFORM_DIR }}
-          # Get server ID from existing servers
-          SERVER_ID=$(~/.hcloud/bin/hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)
+          # List and delete servers
+          hcloud server list -o json
+          SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)
           if [ -n "$SERVER_ID" ]; then
             echo "Deleting server: $SERVER_ID"
-            ~/.hcloud/bin/hcloud server delete "$SERVER_ID"
+            hcloud server delete "$SERVER_ID"
+            echo "Server deleted successfully"
           else
             echo "No linux-desktop servers found to delete"
           fi

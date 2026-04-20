@@ -107,8 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs
-          path: ${{ env.TERRAFORM_DIR }}/.terraform/
-          retention-days: 1
+          path: ${{ env.TERRAFORM_DIR }}/
 
   deploy:
     name: Deploy Desktop

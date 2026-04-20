@@ -113,6 +113,14 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           IP=$(terraform output -raw ipv4_address)
           echo "server_ip=$IP" >> $GITHUB_OUTPUT
+          echo "$IP" > server-ip.txt
+
+      - name: Upload server IP
+        if: github.event.inputs.action == 'apply'
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-ip
+          path: ${{ env.TERRAFORM_DIR }}/server-ip.txt
 
       - name: Upload Terraform state
         if: github.event.inputs.action == 'apply'
@@ -131,16 +139,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Terraform state
+      - name: Download Terraform state and server IP
         uses: actions/download-artifact@v4
         with:
-          name: terraform-outputs
-          path: ${{ env.TERRAFORM_DIR }}/.terraform/
+          path: ${{ env.TERRAFORM_DIR }}/
 
       - name: Get server IP
         run: |
-          cd ${{ env.TERRAFORM_DIR }}
-          IP=$(terraform output -raw ipv4_address)
+          # Read server IP from downloaded artifact
+          IP=$(cat ${{ env.TERRAFORM_DIR }}/server-ip.txt)
           echo "SERVER_IP=$IP" >> $GITHUB_ENV
           echo "Server IP: $IP"
 

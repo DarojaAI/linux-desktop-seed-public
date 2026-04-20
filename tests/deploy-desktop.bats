@@ -1,14 +1,17 @@
 #!/usr/bin/env bats
 # BATS tests for linux-desktop-seed deployment script
 
+# Get the project root directory
+PROJECT_ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+
 # Test syntax validation
 @test "deploy-desktop.sh syntax is valid" {
-    run bash -n "$BATS_TEST_DIRNAME/../../deploy-desktop.sh"
+    run bash -n "$PROJECT_ROOT/deploy-desktop.sh"
     [ "$status" -eq 0 ]
 }
 
 @test "config.sh syntax is valid" {
-    run bash -n "$BATS_TEST_DIRNAME/../../config.sh"
+    run bash -n "$PROJECT_ROOT/config.sh"
     [ "$status" -eq 0 ]
 }
 
@@ -19,26 +22,26 @@
 
 # Test config.sh functions exist
 @test "config.sh has get_component_keys function" {
-    source "$BATS_TEST_DIRNAME/../../config.sh"
+    source "$PROJECT_ROOT/config.sh"
     declare -f get_component_keys > /dev/null
     [ $? -eq 0 ]
 }
 
 @test "config.sh has verify_component function" {
-    source "$BATS_TEST_DIRNAME/../../config.sh"
+    source "$PROJECT_ROOT/config.sh"
     declare -f verify_component > /dev/null
     [ $? -eq 0 ]
 }
 
 @test "config.sh has verify_all_components function" {
-    source "$BATS_TEST_DIRNAME/../../config.sh"
+    source "$PROJECT_ROOT/config.sh"
     declare -f verify_all_components > /dev/null
     [ $? -eq 0 ]
 }
 
 # Test component keys are extracted correctly
 @test "config.sh declares expected components" {
-    source "$BATS_TEST_DIRNAME/../../config.sh"
+    source "$PROJECT_ROOT/config.sh"
     local keys
     keys=$(get_component_keys)
 
@@ -50,7 +53,7 @@
 
 # Test component definitions have required fields
 @test "components have name, check, and required fields" {
-    source "$BATS_TEST_DIRNAME/../../config.sh"
+    source "$PROJECT_ROOT/config.sh"
 
     # GNOME Desktop
     [ -n "${COMPONENTS[gnome_name]}" ]

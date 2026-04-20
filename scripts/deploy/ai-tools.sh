@@ -8,13 +8,6 @@ if [[ -z "${SCRIPT_DIR:-}" ]]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 
-# shellcheck source=openclaw/install.sh
-source "$_ai_dir/openclaw/install.sh"
-# shellcheck source=openclaw/config.sh
-source "$_ai_dir/openclaw/config.sh"
-# shellcheck source=openclaw/governance.sh
-source "$_ai_dir/openclaw/governance.sh"
-
 # Resolve openclaw scripts from scripts/install/openclaw/ (sibling to scripts/deploy/)
 _ai_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../install" && pwd -P)"
 

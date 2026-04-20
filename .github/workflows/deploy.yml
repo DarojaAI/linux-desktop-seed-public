@@ -204,7 +204,8 @@ jobs:
 
       - name: Copy deployment script and modules
         run: |
-          scp -o StrictHostKeyChecking=no -r deploy-desktop.sh scripts root@${{ env.SERVER_IP }}:/tmp/
+          scp -o StrictHostKeyChecking=no -r deploy-desktop.sh root@${{ env.SERVER_IP }}:/tmp/
+          scp -o StrictHostKeyChecking=no -r scripts root@${{ env.SERVER_IP }}:/tmp/
 
       - name: Run deployment
         run: |

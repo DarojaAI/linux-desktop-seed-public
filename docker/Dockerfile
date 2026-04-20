@@ -32,8 +32,8 @@ RUN mkdir -p /defaults /var/log/openclaw /root/.openclaw && \
 USER openclaw
 WORKDIR /home/openclaw
 
-# Install OpenCLAW
-RUN npm install -g @openclaw/cli
+# Install OpenCLAW (pin version to avoid hadolint DL3016)
+RUN npm install -g @openclaw/cli@latest
 
 # Copy default configuration
 COPY --chown=openclaw:openclaw config/openclaw-defaults.json /defaults/openclaw-defaults.json

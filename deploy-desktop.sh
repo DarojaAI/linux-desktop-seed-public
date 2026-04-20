@@ -111,7 +111,7 @@ install_openclaw
     setup_openclaw_backup_config
     setup_openclaw_change_request
     setup_openclaw_systemd_override
-=======
+
     # AI tools (OpenCLAW, OpenRouter)
     if [[ "${SKIP_AI_TOOLS:-false}" != "true" ]]; then
         install_openclaw

@@ -153,6 +153,7 @@ jobs:
     needs: terraform
     if: github.event.inputs.action == 'apply'
     runs-on: ubuntu-latest
+    environment: head
 
     steps:
       - name: Checkout

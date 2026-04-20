@@ -31,15 +31,3 @@ variable "image" {
   type        = string
   default     = "ubuntu-22.04"
 }
-
-variable "ssh_keys" {
-  description = "SSH key IDs or names to attach"
-  type        = list(string)
-  default     = []
-}
-
-variable "labels" {
-  description = "Labels to apply to resources"
-  type        = map(string)
-  default     = {}
-}

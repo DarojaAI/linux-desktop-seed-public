@@ -7,27 +7,3 @@ variable "hcloud_token" {
   type        = string
   sensitive   = true
 }
-
-variable "server_name" {
-  description = "Name of the server"
-  type        = string
-  default     = "linux-desktop"
-}
-
-variable "server_type" {
-  description = "Hetzner server type (e.g., cpx21, cpx41)"
-  type        = string
-  default     = "cpx41"
-}
-
-variable "location" {
-  description = "Hetzner datacenter location (e.g., fsn1, nbg1)"
-  type        = string
-  default     = "fsn1"
-}
-
-variable "image" {
-  description = "OS image to use"
-  type        = string
-  default     = "ubuntu-22.04"
-}

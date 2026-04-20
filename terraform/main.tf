@@ -57,12 +57,6 @@ variable "ssh_keys" {
   default     = []
 }
 
-variable "public_ipv4_enabled" {
-  description = "Enable public IPv4"
-  type        = bool
-  default     = true
-}
-
 variable "labels" {
   description = "Labels to apply to resources"
   type        = map(string)

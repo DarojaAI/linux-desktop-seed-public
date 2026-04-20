@@ -15,7 +15,7 @@ jobs:
 
       - name: Syntax check all shell scripts
         run: |
-          find . -name "*.sh" -not -path "./.git/*" -not -path "./.venv/*" | while read -r f; do
+          find . -name "*.sh" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./.terraform/*" | while read -r f; do
             bash -n "$f" && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
           done
 
@@ -58,8 +58,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install bats-core
+        run: npm install -g bats
+
       - name: Validate BATS test syntax
         run: |
           find tests/ -name "*.bats" | while read -r f; do
-            bash -n "$f" && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
+            bats --syntax-only "$f" && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
           done

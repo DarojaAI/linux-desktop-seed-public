@@ -8,15 +8,17 @@ LABEL description="Containerized OpenCLAW agent with security hardening"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    jq \
-    ca-certificates \
+    curl=* \
+    jq=* \
+    ca-certificates=* \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs=20.* \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

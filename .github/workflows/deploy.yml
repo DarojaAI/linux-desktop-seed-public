@@ -62,6 +62,26 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           terraform init -input=false
 
+      - name: Pre-destroy for apply
+        if: github.event.inputs.action == 'apply'
+        run: |
+          # Install hcloud CLI via apt
+          sudo apt-get update && sudo apt-get install -y hcloud-cli
+          export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
+
+          # List servers
+          hcloud server list -o json
+
+          # Delete existing linux-desktop servers first to free quota
+          for SERVER_ID in $(hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id'); do
+            echo "Deleting existing server: $SERVER_ID"
+            hcloud server delete "$SERVER_ID"
+          done
+          echo "Cleanup complete"
+
+          # List remaining servers
+          hcloud server list -o json
+
       - name: Terraform Plan
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
@@ -92,9 +112,6 @@ jobs:
           # Install hcloud CLI via apt
           sudo apt-get update && sudo apt-get install -y hcloud-cli
           export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
-
-          # List servers
-          hcloud server list -o json
 
           # Delete servers
           SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)

@@ -108,7 +108,7 @@ setup_monitoring() {
 
     # Copy monitoring script
     local monitor_script="/usr/local/bin/session-monitor.sh"
-    local repo_script="../runtime/session-monitor.sh"
+    local repo_script="$SCRIPT_DIR/scripts/session-monitor.sh"
 
     if [[ -f "$repo_script" ]]; then
         # Convert CRLF to LF for Linux compatibility
@@ -122,7 +122,7 @@ setup_monitoring() {
 
     # Copy analysis script
     local analyze_script="/usr/local/bin/analyze-session-logs.sh"
-    local repo_analyze="../runtime/analyze-session-logs.sh"
+    local repo_analyze="$SCRIPT_DIR/scripts/analyze-session-logs.sh"
 
     if [[ -f "$repo_analyze" ]]; then
         # Convert CRLF to LF for Linux compatibility

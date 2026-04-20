@@ -1,0 +1,158 @@
+# =============================================================================
+# Linux Desktop - Deploy to Hetzner via GitHub Actions
+# =============================================================================
+# Workflow: terraform-apply -> deploy-desktop
+#
+# Required secrets:
+#   HETZNER_API_TOKEN    - Hetzner API token
+#   SSH_PRIVATE_KEY      - Private key for SSH access
+#
+# Required variables:
+#   HETZNER_LOCATION     - Datacenter (fsn1, nbg1, etc.)
+#   SERVER_TYPE          - Server type (cpx21, cpx41, etc.)
+# =============================================================================
+
+name: Deploy Linux Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: '1.7'
+  TERRAFORM_DIR: 'terraform'
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          cli_config_credentials_token: ${{ secrets.HETZNER_API_TOKEN }}
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -input=false
+
+      - name: Terraform Plan
+        id: plan
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform plan -input=false \
+            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
+            -var="location=${{ vars.HETZNER_LOCATION }}" \
+            -var="server_type=${{ vars.SERVER_TYPE }}"
+        continue-on-error: true
+
+      - name: Terraform Apply
+        id: apply
+        if: github.event.inputs.action == 'apply'
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform apply -input=false -auto-approve \
+            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+            -var="ssh_private_key=${{ secrets.SSH_PRIVATE_KEY }}" \
+            -var="location=${{ vars.HETZNER_LOCATION }}" \
+            -var="server_type=${{ vars.SERVER_TYPE }}"
+
+      - name: Terraform Destroy
+        id: destroy
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform destroy -input=false -auto-approve \
+            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}"
+
+      - name: Set outputs for apply
+        if: github.event.inputs.action == 'apply'
+        id: outputs
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          IP=$(terraform output -raw ipv4_address)
+          echo "server_ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Upload Terraform state
+        if: github.event.inputs.action == 'apply'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs
+          path: ${{ env.TERRAFORM_DIR }}/.terraform/
+          retention-days: 1
+
+  deploy:
+    name: Deploy Desktop
+    needs: terraform
+    if: github.event.inputs.action == 'apply'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Terraform state
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-outputs
+          path: ${{ env.TERRAFORM_DIR }}/.terraform/
+
+      - name: Get server IP
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          IP=$(terraform output -raw ipv4_address)
+          echo "SERVER_IP=$IP" >> $GITHUB_ENV
+          echo "Server IP: $IP"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Copy deployment script
+        run: |
+          scp -o StrictHostKeyChecking=no deploy-desktop.sh root@${{ env.SERVER_IP }}:/tmp/
+
+      - name: Run deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
+            'bash /tmp/deploy-desktop.sh'
+
+      - name: Show connection info
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Server IP:** ${{ env.SERVER_IP }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**RDP Access:** Connect to ${{ env.SERVER_IP }}:3389" >> $GITHUB_STEP_SUMMARY

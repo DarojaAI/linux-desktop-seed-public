@@ -139,14 +139,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Terraform state and server IP
+      - name: Download server IP
         uses: actions/download-artifact@v4
         with:
+          name: server-ip
           path: ${{ env.TERRAFORM_DIR }}/
 
       - name: Get server IP
         run: |
-          # Read server IP from downloaded artifact
           IP=$(cat ${{ env.TERRAFORM_DIR }}/server-ip.txt)
           echo "SERVER_IP=$IP" >> $GITHUB_ENV
           echo "Server IP: $IP"

@@ -28,9 +28,8 @@ variable "hcloud_token" {
 }
 
 variable "server_name" {
-  description = "Name of the server"
+  description = "Name of the server (must be unique)"
   type        = string
-  default     = "linux-desktop-${timestamp()}"
 }
 
 variable "server_type" {

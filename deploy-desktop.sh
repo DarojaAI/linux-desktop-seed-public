@@ -60,6 +60,7 @@ main() {
         log_info "  - Google Cloud SDK"
         log_info "  - Session monitoring"
         log_info "  - GNOME extensions"
+        log_info "  - VM maintenance scripts"
         echo ""
         log_info "To run this deployment:"
         log_info "  sudo bash deploy-desktop.sh"
@@ -144,11 +145,44 @@ install_openclaw
         setup_github_issues
     fi
 
+    # VM Maintenance Scripts (for head VM controlling other VMs)
+    install_maintenance_scripts
+
     # Validation
     validate_deployment
     show_summary
 
     log_info "System ready for deployment"
+}
+
+# Install maintenance scripts for VM-A head node
+install_maintenance_scripts() {
+    log_info "Installing VM maintenance scripts..."
+
+    local scripts_dir="$SCRIPT_DIR/scripts/maintenance"
+    local target_dir="/home/$TARGET_USER/maintenance-scripts"
+
+    if [[ ! -d "$scripts_dir" ]]; then
+        log_warn "Maintenance scripts directory not found: $scripts_dir"
+        return 0
+    fi
+
+    # Create target directory
+    mkdir -p "$target_dir"
+
+    # Copy all maintenance scripts
+    for script in "$scripts_dir"/*.sh; do
+        if [[ -f "$script" ]]; then
+            cp "$script" "$target_dir/"
+            chmod +x "$target_dir/$(basename "$script")"
+            log_info "  Installed: $(basename "$script")"
+        fi
+    done
+
+    # Set ownership
+    chown -R "$TARGET_USER:$TARGET_USER" "$target_dir"
+
+    log_info "Maintenance scripts installed to $target_dir"
 }
 
 main "$@"

@@ -62,6 +62,12 @@ variable "hetzner_ssh_key_name" {
   default     = ""
 }
 
+variable "ssh_public_key" {
+  description = "SSH public key to inject at boot (for passwordless access)"
+  type        = string
+  default     = ""
+}
+
 variable "labels" {
   description = "Labels to apply to resources"
   type        = map(string)
@@ -83,6 +89,15 @@ resource "hcloud_server" "main" {
 
   # SSH keys - use directly, not dynamic block
   ssh_keys = var.hetzner_ssh_key_name != "" ? [var.hetzner_ssh_key_name] : var.ssh_keys
+
+  # Cloud-init for additional SSH keys at boot
+  # This allows passwordless access from the defined public key
+  user_data = var.ssh_public_key != "" ? <<-EOF
+    #cloud-config
+    ssh_authorized_keys:
+      - ${var.ssh_public_key}
+  EOF
+  : null
 
   labels = var.labels
 }

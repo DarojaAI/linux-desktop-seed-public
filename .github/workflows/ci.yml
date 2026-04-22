@@ -15,7 +15,7 @@ jobs:
 
       - name: Syntax check all shell scripts
         run: |
-          find . -name "*.sh" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./.terraform/*" | while read -r f; do
+          find . -name "*.sh" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./.terraform/*" -not -path "./tests/*" | while read -r f; do
             bash -n "$f" && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
           done
 
@@ -64,6 +64,6 @@ jobs:
 
       - name: Validate BATS test syntax
         run: |
-          find tests/ -name "*.bats" | while read -r f; do
+          find tests/ -name "*.bats" -o -name "test_*.sh" | while read -r f; do
             bats "$f" > /dev/null 2>&1 && echo "OK: $f" || { echo "FAIL: $f"; exit 1; }
           done

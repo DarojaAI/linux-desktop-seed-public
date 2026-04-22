@@ -104,15 +104,6 @@ main() {
         install_gcloud
     fi
 
-install_openclaw
-    setup_openclaw_wrapper
-    setup_openclaw_config
-    setup_openclaw_lock_config
-    setup_openclaw_validate_config
-    setup_openclaw_backup_config
-    setup_openclaw_change_request
-    setup_openclaw_systemd_override
-
     # AI tools (OpenCLAW, OpenRouter)
     if [[ "${SKIP_AI_TOOLS:-false}" != "true" ]]; then
         install_openclaw
@@ -123,6 +114,7 @@ install_openclaw
         setup_openclaw_backup_config
         setup_openclaw_change_request
         setup_openclaw_systemd_override
+        setup_openclaw_systemd_service
     fi
 
     # Configuration

@@ -60,11 +60,11 @@ install_claude_code() {
         return 0
     fi
 
-    # Ensure Node.js 18+ is available (Claude Code requires Node 18+)
-    if ! command -v node &> /dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 18 ]]; then
-        log_info "Installing Node.js 20.x..."
+    # Ensure Node.js 22+ is available (OpenCLAW and Claude Code require Node 22+)
+    if ! command -v node &> /dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 22 ]]; then
+        log_info "Installing Node.js 22.x..."
         # Use NodeSource for modern Node.js version
-        if ! curl -fsSL https://deb.nodesource.com/setup_20.x | bash -; then
+        if ! curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; then
             log_error "Failed to setup NodeSource repository"
             return 1
         fi

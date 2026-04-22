@@ -48,14 +48,18 @@ install_openclaw() {
         fi
     fi
 
-    if ! command -v node &> /dev/null; then
-        log_info "Installing Node.js for OpenCLAW..."
-        if ! apt-get install -y nodejs npm 2>&1 | grep -q "Err\|Failed"; then
-            log_info "Node.js installed"
-            cleanup_openclaw_npm
-        else
-            log_warn "Failed to install Node.js"
+    if ! command -v node &> /dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 22 ]]; then
+        log_info "Installing Node.js 22.x for OpenCLAW..."
+        if ! curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; then
+            log_error "Failed to setup NodeSource repository"
+            return 1
         fi
+        if ! apt-get install -y nodejs; then
+            log_error "Failed to install Node.js"
+            return 1
+        fi
+        cleanup_openclaw_npm
+        log_info "Node.js 22.x installed"
     fi
 
     if command -v npm &> /dev/null; then
@@ -106,4 +110,77 @@ EOF
     log_info "OpenCLAW wrapper created at $wrapper_path"
 }
 
-export -f cleanup_openclaw_npm get_latest_openclaw_version install_openclaw setup_openclaw_wrapper
+setup_openclaw_systemd_service() {
+    log_step "Setting up OpenCLAW gateway systemd service..."
+
+    local target_home
+    target_home=$(getent passwd "$TARGET_USER" | cut -d: -f6)
+    local service_dir="$target_home/.config/systemd/user"
+    local service_file="$service_dir/openclaw-gateway.service"
+    local override_dir="$service_dir/openclaw-gateway.service.d"
+    local override_file="$override_dir/override.conf"
+
+    local openclaw_path
+    openclaw_path=$(command -v openclaw 2>/dev/null || echo "/usr/bin/openclaw")
+
+    # Get Node.js path
+    local node_path
+    node_path=$(command -v node 2>/dev/null || echo "/usr/bin/node")
+
+    # Create service directory
+    mkdir -p "$service_dir"
+
+    # Create systemd service file
+    cat > "$service_file" << EOF
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+ExecStart=$node_path $openclaw_path gateway --port 18789
+Restart=always
+RestartSec=5
+RestartPreventExitStatus=78
+TimeoutStopSec=30
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+KillMode=control-group
+
+[Install]
+WantedBy=default.target
+EOF
+
+    # Create override directory
+    mkdir -p "$override_dir"
+
+    # Get user ID for XDG_RUNTIME_DIR
+    local user_id
+    user_id=$(id -u "$TARGET_USER")
+
+    # Build environment override
+    local api_key="${OPENROUTER_API_KEY:-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}"
+    local discord_token="${DISCORD_BOT_TOKEN:-}"
+
+    cat > "$override_file" << EOF
+[Service]
+Environment=OPENROUTER_API_KEY=$api_key
+Environment=HOME=$target_home
+Environment=XDG_RUNTIME_DIR=/run/user/$user_id
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$target_home/.local/bin:$target_home/.npm-global/bin
+EOF
+
+    # Add Discord token if available
+    if [[ -n "$discord_token" ]]; then
+        echo "Environment=DISCORD_BOT_TOKEN=$discord_token" >> "$override_file"
+    fi
+
+    # Set ownership
+    chown -R "$TARGET_USER:$TARGET_USER" "$service_dir"
+
+    log_info "OpenCLAW systemd service created at $service_file"
+}
+
+export -f cleanup_openclaw_npm get_latest_openclaw_version install_openclaw setup_openclaw_wrapper setup_openclaw_systemd_service

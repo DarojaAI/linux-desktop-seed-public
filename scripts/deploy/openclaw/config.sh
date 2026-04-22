@@ -19,7 +19,22 @@ setup_openclaw_config() {
 
     mkdir -p "$openclaw_dir/agents/main/agent"
 
+    # Check if we need to update config (new install, force flag, or Discord token present)
+    local should_update=false
+    local discord_token="${DISCORD_BOT_TOKEN:-}"
+
     if [[ ! -f "$config_file" ]]; then
+        should_update=true
+    elif [[ "${FORCE_OPENCLAW_CONFIG:-false}" == "true" ]]; then
+        should_update=true
+    elif [[ -n "$discord_token" ]]; then
+        # Check if config lacks Discord section
+        if ! grep -q '"discord"' "$config_file" 2>/dev/null; then
+            should_update=true
+        fi
+    fi
+
+    if [[ "$should_update" == "true" ]]; then
         local repo_config="$(dirname "$SCRIPT_DIR")/config/openclaw-defaults.json"
         if [[ -f "$repo_config" ]]; then
             cp "$repo_config" "$config_file"
@@ -35,10 +50,19 @@ setup_openclaw_config() {
       "model": "openrouter/minimax/MiniMax-M2.7",
       "thinkingDefault": "minimal"
     }
+  },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "token": { "source": "env", "id": "DISCORD_BOT_TOKEN" },
+      "groupPolicy": "allowlist",
+      "allowlist": [],
+      "streaming": true
+    }
   }
 }
 EOF
-            log_info "Created minimal OpenCLAW config"
+            log_info "Created minimal OpenCLAW config with Discord"
         fi
     else
         log_info "OpenCLAW config already exists"
@@ -83,6 +107,7 @@ setup_openclaw_systemd_override() {
     local override_file="$override_dir/override.conf"
 
     local api_key="${OPENROUTER_API_KEY:-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}"
+    local discord_token="${DISCORD_BOT_TOKEN:-}"
 
     mkdir -p "$override_dir"
 
@@ -92,6 +117,11 @@ Environment=OPENROUTER_API_KEY=$api_key
 Environment=HOME=/root
 Environment=XDG_RUNTIME_DIR=/run/user/0
 EOF
+
+    # Append Discord token if available
+    if [[ -n "$discord_token" ]]; then
+        echo "Environment=DISCORD_BOT_TOKEN=$discord_token" >> "$override_file"
+    fi
 
     chown -R "$TARGET_USER:$TARGET_USER" "$target_home/.config"
     log_info "OpenCLAW systemd override created at $override_file"

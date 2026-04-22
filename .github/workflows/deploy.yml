@@ -6,6 +6,8 @@
 # Required secrets:
 #   HETZNER_API_TOKEN    - Hetzner API token
 #   SSH_PRIVATE_KEY      - Private key for SSH access
+#   DISCORD_BOT_TOKEN    - Discord bot token for OpenCLAW
+#   OPENROUTER_API_KEY   - OpenRouter API key for Claude
 #
 # Required variables:
 #   HETZNER_LOCATION     - Datacenter (fsn1, nbg1, etc.)
@@ -208,9 +210,12 @@ jobs:
           scp -o StrictHostKeyChecking=no -r scripts root@${{ env.SERVER_IP }}:/tmp/
 
       - name: Run deployment
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            'cd /tmp && bash deploy-desktop.sh'
+            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && cd /tmp && bash deploy-desktop.sh'
 
       - name: Show connection info
         run: |

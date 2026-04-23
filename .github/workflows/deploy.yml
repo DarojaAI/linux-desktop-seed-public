@@ -80,10 +80,15 @@ jobs:
         run: |
           ENV="${{ github.event.inputs.environment }}"
           SERVER_NAME="${{ vars.SERVER_NAME }}"
+          # Debug: show what's being used
+          echo "DEBUG: environment input = $ENV"
+          echo "DEBUG: vars.SERVER_NAME = $SERVER_NAME"
+          echo "DEBUG: vars.SERVER_NAME is empty = $([ -z "$SERVER_NAME" ] && echo 'YES' || echo 'NO')"
           # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
+          echo "DEBUG: final SERVER_NAME = $SERVER_NAME"
           echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
@@ -99,10 +104,15 @@ jobs:
         run: |
           ENV="${{ github.event.inputs.environment }}"
           SERVER_NAME="${{ vars.SERVER_NAME }}"
+          # Debug: show what's being used
+          echo "DEBUG: environment input = $ENV"
+          echo "DEBUG: vars.SERVER_NAME = $SERVER_NAME"
+          echo "DEBUG: vars.SERVER_NAME is empty = $([ -z "$SERVER_NAME" ] && echo 'YES' || echo 'NO')"
           # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
+          echo "DEBUG: final SERVER_NAME = $SERVER_NAME"
           echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \

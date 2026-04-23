@@ -160,8 +160,12 @@ EOF
     local user_id
     user_id=$(id -u "$TARGET_USER")
 
-    # Build environment override
-    local api_key="${OPENROUTER_API_KEY:-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}"
+    # Build environment override - API key must come from environment variable
+    local api_key="${OPENROUTER_API_KEY:-}"
+    if [[ -z "$api_key" ]]; then
+        log_error "OPENROUTER_API_KEY environment variable is required"
+        return 1
+    fi
     local discord_token="${DISCORD_BOT_TOKEN:-}"
 
     cat > "$override_file" << EOF

@@ -109,6 +109,7 @@ main() {
         install_openclaw
         setup_openclaw_wrapper
         setup_openclaw_config
+        setup_openclaw_agent_binding
         setup_openclaw_lock_config
         setup_openclaw_validate_config
         setup_openclaw_backup_config

@@ -16,6 +16,7 @@ setup_openclaw_config() {
     local openclaw_dir="$target_home/.openclaw"
     local config_file="$openclaw_dir/openclaw.json"
     local models_file="$openclaw_dir/agents/main/agent/models.json"
+    local discord_channel_id="${OPENCLAW_DISCORD_CHANNEL_ID:-}"
 
     mkdir -p "$openclaw_dir/agents/main/agent"
 
@@ -31,6 +32,14 @@ setup_openclaw_config() {
         # Check if config lacks Discord section
         if ! grep -q '"discord"' "$config_file" 2>/dev/null; then
             should_update=true
+        fi
+    fi
+
+    # Always update if channel ID is provided but config is outdated
+    if [[ -n "$discord_channel_id" && -f "$config_file" ]]; then
+        if ! grep -q '"guilds"' "$config_file" 2>/dev/null; then
+            should_update=true
+            log_info "Config outdated - missing guilds structure, will update"
         fi
     fi
 
@@ -54,11 +63,21 @@ setup_openclaw_config() {
   "channels": {
     "discord": {
       "enabled": true,
-      "token": { "source": "env", "id": "DISCORD_BOT_TOKEN" },
+      "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
       "groupPolicy": "allowlist",
       "allowlist": [],
-      "streaming": true
+      "streaming": { "mode": "off" },
+      "guilds": {
+        "1485047825967480862": {
+          "requireMention": false,
+          "users": ["1162240440322502656"],
+          "channels": {}
+        }
+      }
     }
+  },
+  "gateway": {
+    "mode": "local"
   }
 }
 EOF

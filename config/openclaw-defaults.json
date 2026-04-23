@@ -62,10 +62,17 @@
   "channels": {
     "discord": {
       "enabled": true,
-      "token": { "source": "env", "id": "DISCORD_BOT_TOKEN" },
+      "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
       "groupPolicy": "allowlist",
       "allowlist": [],
-      "streaming": true
+      "streaming": { "mode": "off" },
+      "guilds": {
+        "1485047825967480862": {
+          "requireMention": false,
+          "users": ["1162240440322502656"],
+          "channels": {}
+        }
+      }
     }
   },
   "gateway": {

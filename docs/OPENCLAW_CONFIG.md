@@ -24,7 +24,7 @@ Agent models configuration. Deployed to `/home/desktopuser/.openclaw/agents/main
 - `maxTokens` - Max output tokens
 - `cost` - Pricing for rate limiting
 
-### `scripts/openclaw-ideal-config.json`
+### `config/openclaw-ideal-config.json`
 Reference configuration template (not deployed). Contains placeholders for tokens that must be replaced at deploy time:
 
 - `DISCORD_BOT_TOKEN_PLACEHOLDER` - Replace with actual Discord bot token

@@ -8,6 +8,7 @@
 #   SSH_PRIVATE_KEY      - Private key for SSH access
 #   DISCORD_BOT_TOKEN    - Discord bot token for OpenCLAW
 #   OPENROUTER_API_KEY   - OpenRouter API key for Claude
+#   OPENCLAW_DISCORD_CHANNEL_ID - Discord channel ID for default agent
 #
 # Required variables:
 #   HETZNER_LOCATION     - Datacenter (fsn1, nbg1, etc.)
@@ -28,6 +29,11 @@ on:
           - plan
           - apply
           - destroy
+      server_name:
+        description: 'Server name (leave empty for new, or specify existing to update)'
+        required: false
+        type: string
+        default: ''
 
 env:
   TF_VERSION: '1.7'
@@ -68,7 +74,10 @@ jobs:
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
-          SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          if [ -z "$SERVER_NAME" ]; then
+            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+          fi
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
@@ -81,7 +90,10 @@ jobs:
         id: apply
         if: github.event.inputs.action == 'apply'
         run: |
-          SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          if [ -z "$SERVER_NAME" ]; then
+            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+          fi
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
@@ -193,9 +205,10 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENCLAW_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_CHANNEL_ID }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && cd /tmp && bash deploy-desktop.sh'
+            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && export OPENCLAW_DISCORD_CHANNEL_ID="$OPENCLAW_DISCORD_CHANNEL_ID" && cd /tmp && bash deploy-desktop.sh'
 
       - name: Show connection info
         run: |

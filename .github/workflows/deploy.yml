@@ -29,11 +29,15 @@ on:
           - plan
           - apply
           - destroy
-      server_name:
-        description: 'Server name (leave empty for new, or specify existing to update)'
-        required: false
-        type: string
-        default: ''
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'head'
+        type: choice
+        options:
+          - head
+          - prod
+          - test
 
 env:
   TF_VERSION: '1.7'
@@ -74,10 +78,16 @@ jobs:
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
-          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          ENV="${{ github.event.inputs.environment }}"
+          case "$ENV" in
+            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
+            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
+            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
+          esac
           if [ -z "$SERVER_NAME" ]; then
-            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+            SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
+          echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
@@ -90,10 +100,16 @@ jobs:
         id: apply
         if: github.event.inputs.action == 'apply'
         run: |
-          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          ENV="${{ github.event.inputs.environment }}"
+          case "$ENV" in
+            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
+            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
+            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
+          esac
           if [ -z "$SERVER_NAME" ]; then
-            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+            SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
+          echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \
             -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
@@ -213,12 +229,17 @@ jobs:
 
       - name: Run deployment
         env:
+          ENV: ${{ github.event.inputs.environment }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENCLAW_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_CHANNEL_ID }}
         run: |
+          case "$ENV" in
+            head) CHANNEL_ID="${{ secrets.HEAD_OPENCLAW_CHANNEL_ID }}" ;;
+            prod) CHANNEL_ID="${{ secrets.PROD_OPENCLAW_CHANNEL_ID }}" ;;
+            test) CHANNEL_ID="${{ secrets.TEST_OPENCLAW_CHANNEL_ID }}" ;;
+          esac
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && export OPENCLAW_DISCORD_CHANNEL_ID="$OPENCLAW_DISCORD_CHANNEL_ID" && cd /tmp && bash deploy-desktop.sh'
+            "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$CHANNEL_ID' && cd /tmp && bash deploy-desktop.sh"
 
       - name: Show connection info
         run: |

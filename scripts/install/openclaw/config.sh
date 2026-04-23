@@ -216,11 +216,26 @@ setup_openclaw_agent_binding() {
         return 0
     fi
 
-    # Use Python to add agent and binding
+    # Use Python to add agent and binding - pass bash vars as env vars to avoid interpolation issues
+    discord_channel_id="$discord_channel_id" \
+    repo_name="$repo_name" \
+    repo_dir="$repo_dir" \
+    openclaw_dir="$openclaw_dir" \
     python3 -c "
 import json
+import os
 
-with open('$config_file', 'r') as f:
+config_file = '$config_file'
+repo_name = os.environ.get('repo_name', 'linux-desktop-seed')
+repo_dir = os.environ.get('repo_dir', '')
+openclaw_dir = os.environ.get('openclaw_dir', '')
+discord_channel_id = os.environ.get('discord_channel_id', '')
+
+if not discord_channel_id:
+    print('No discord_channel_id provided, skipping binding')
+    exit(0)
+
+with open(config_file, 'r') as f:
     config = json.load(f)
 
 # Ensure agents list exists
@@ -230,35 +245,35 @@ if 'list' not in config['agents']:
     config['agents']['list'] = []
 
 # Add linux-desktop-seed agent if not exists
-agent_exists = any(a.get('id') == '$repo_name' for a in config['agents']['list'])
+agent_exists = any(a.get('id') == repo_name for a in config['agents']['list'])
 if not agent_exists:
     agent = {
-        'id': '$repo_name',
-        'name': '$repo_name',
+        'id': repo_name,
+        'name': repo_name,
         'model': 'openrouter/minimax/MiniMax-M2.7',
-        'workspace': '$repo_dir',
-        'agentDir': f'$openclaw_dir/agents/$repo_name/agent'
+        'workspace': repo_dir,
+        'agentDir': f'{openclaw_dir}/agents/{repo_name}/agent'
     }
     config['agents']['list'].append(agent)
-    print(f'Added agent: $repo_name')
+    print(f'Added agent: {repo_name}')
 
 # Ensure bindings list exists
 if 'bindings' not in config:
     config['bindings'] = []
 
 # Add binding if not exists
-binding_exists = any(b.get('agentId') == '$repo_name' for b in config['bindings'])
+binding_exists = any(b.get('agentId') == repo_name for b in config['bindings'])
 if not binding_exists:
     binding = {
         'type': 'route',
-        'agentId': '$repo_name',
+        'agentId': repo_name,
         'match': {
             'channel': 'discord',
-            'peer': {'kind': 'channel', 'id': '$discord_channel_id'}
+            'peer': {'kind': 'channel', 'id': discord_channel_id}
         }
     }
     config['bindings'].append(binding)
-    print(f'Added binding: $repo_name -> $discord_channel_id')
+    print(f'Added binding: {repo_name} -> {discord_channel_id}')
 
 # Add channel to allowed list
 if 'channels' in config and 'discord' in config.get('channels', {}):
@@ -272,7 +287,7 @@ if 'channels' in config and 'discord' in config.get('channels', {}):
         discord_config['guilds'][guild_id]['channels'] = {}
     discord_config['guilds'][guild_id]['channels'][discord_channel_id] = {}
 
-with open('$config_file', 'w') as f:
+with open(config_file, 'w') as f:
     json.dump(config, f, indent=2)
 print('Config updated')
 " || log_warn "Failed to update config"

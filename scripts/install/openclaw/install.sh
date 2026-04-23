@@ -184,6 +184,20 @@ EOF
     # Set ownership
     chown -R "$TARGET_USER:$TARGET_USER" "$service_dir"
 
+    # Enable and start the service
+    log_info "Enabling and starting OpenCLAW gateway service..."
+    systemctl --user daemon-reload
+    systemctl --user enable openclaw-gateway.service
+    systemctl --user start openclaw-gateway.service
+
+    # Wait a moment and check status
+    sleep 2
+    if systemctl --user is-active --quiet openclaw-gateway.service; then
+        log_info "OpenCLAW gateway service is running"
+    else
+        log_warn "OpenCLAW gateway service may not have started properly, check logs with: journalctl --user -u openclaw-gateway.service"
+    fi
+
     log_info "OpenCLAW systemd service created at $service_file"
 }
 

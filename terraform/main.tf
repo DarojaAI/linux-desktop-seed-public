@@ -11,6 +11,16 @@ terraform {
       version = "~> 1.46"
     }
   }
+  backend "s3" {
+    endpoint                    = "https://fc.europe-west1.myhuaweicloud.com"
+    bucket                      = "terraform-state-linux-desktop"
+    key                         = "head/terraform.tfstate"
+    region                      = "eu-central-1"
+    access_key                  = var.hcx_access_key
+    secret_key                  = var.hcx_secret_key
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+  }
 }
 
 provider "hcloud" {
@@ -25,6 +35,20 @@ variable "hcloud_token" {
   description = "Hetzner API token"
   type        = string
   sensitive   = true
+}
+
+variable "hcx_access_key" {
+  description = "HCX S3 access key for Terraform state storage"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "hcx_secret_key" {
+  description = "HCX S3 secret key for Terraform state storage"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
 
 variable "server_name" {

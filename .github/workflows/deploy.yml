@@ -4,11 +4,11 @@
 # Workflow: terraform-apply -> deploy-desktop
 #
 # Required secrets:
-#   HETZNER_API_TOKEN    - Hetzner API token
-#   SSH_PRIVATE_KEY      - Private key for SSH access
-#   DISCORD_BOT_TOKEN    - Discord bot token for OpenCLAW
-#   OPENROUTER_API_KEY   - OpenRouter API key for Claude
-#   OPENCLAW_DISCORD_CHANNEL_ID - Discord channel ID for default agent
+#   HETZNER_API_TOKEN          - Hetzner API token
+#   SSH_PRIVATE_KEY            - Private key for SSH access
+#   DISCORD_BOT_TOKEN          - Discord bot token for OpenCLAW
+#   OPENROUTER_API_KEY         - OpenRouter API key for Claude
+#   OPENCLAW_DISCORD_CHANNEL_ID - Discord channel ID for VM
 #
 # Required variables:
 #   HETZNER_LOCATION     - Datacenter (fsn1, nbg1, etc.)
@@ -79,11 +79,10 @@ jobs:
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          case "$ENV" in
-            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
-            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
-            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
-          esac
+          # Check for existing server name for this environment
+          if [ -f "${{ env.TERRAFORM_DIR }}/server-name.txt" ]; then
+            SERVER_NAME=$(cat ${{ env.TERRAFORM_DIR }}/server-name.txt)
+          fi
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
@@ -101,11 +100,10 @@ jobs:
         if: github.event.inputs.action == 'apply'
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          case "$ENV" in
-            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
-            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
-            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
-          esac
+          # Check for existing server name for this environment
+          if [ -f "${{ env.TERRAFORM_DIR }}/server-name.txt" ]; then
+            SERVER_NAME=$(cat ${{ env.TERRAFORM_DIR }}/server-name.txt)
+          fi
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
           fi
@@ -229,17 +227,12 @@ jobs:
 
       - name: Run deployment
         env:
-          ENV: ${{ github.event.inputs.environment }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENCLAW_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_CHANNEL_ID }}
         run: |
-          case "$ENV" in
-            head) CHANNEL_ID="${{ secrets.HEAD_OPENCLAW_CHANNEL_ID }}" ;;
-            prod) CHANNEL_ID="${{ secrets.PROD_OPENCLAW_CHANNEL_ID }}" ;;
-            test) CHANNEL_ID="${{ secrets.TEST_OPENCLAW_CHANNEL_ID }}" ;;
-          esac
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$CHANNEL_ID' && cd /tmp && bash deploy-desktop.sh"
+            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && export OPENCLAW_DISCORD_CHANNEL_ID="$OPENCLAW_DISCORD_CHANNEL_ID" && cd /tmp && bash deploy-desktop.sh'
 
       - name: Show connection info
         run: |

@@ -74,6 +74,34 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           terraform init -input=false
 
+      - name: Import existing server if needed
+        id: import
+        if: github.event.inputs.action == 'apply'
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
+          if [ -z "$SERVER_NAME" ]; then
+            echo "ERROR: SERVER_NAME is required"
+            exit 1
+          fi
+          # Check if server already exists in Hetzner
+          SERVER_EXISTS=$(curl -s -H "Authorization: Bearer ${{ secrets.HETZNER_API_TOKEN }}" \
+            "https://api.hetzner.cloud/v1/servers?name=$SERVER_NAME" | jq -r '.servers | length')
+          if [ "$SERVER_EXISTS" = "1" ]; then
+            SERVER_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.HETZNER_API_TOKEN }}" \
+              "https://api.hetzner.cloud/v1/servers?name=$SERVER_NAME" | jq -r '.servers[0].id')
+            echo "Found existing server $SERVER_NAME with ID $SERVER_ID, importing into Terraform state..."
+            terraform import \
+              -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+              -var="server_name=$SERVER_NAME" \
+              -var="location=${{ vars.HETZNER_LOCATION }}" \
+              -var="server_type=${{ vars.SERVER_TYPE }}" \
+              -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
+              hcloud_server.main "$SERVER_ID" 2>&1 || echo "Import result: $?"
+          else
+            echo "Server $SERVER_NAME does not exist in Hetzner, will create new"
+          fi
+
       - name: Terraform Plan
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'

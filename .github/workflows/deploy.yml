@@ -74,48 +74,17 @@ jobs:
           cd ${{ env.TERRAFORM_DIR }}
           terraform init -input=false
 
-      - name: Import existing server if needed
-        id: import
-        if: github.event.inputs.action == 'apply'
-        run: |
-          cd ${{ env.TERRAFORM_DIR }}
-          SERVER_NAME="${{ vars.SERVER_NAME }}"
-          if [ -n "$SERVER_NAME" ]; then
-            # Check if server already exists in Hetzner
-            SERVER_EXISTS=$(curl -s -H "Authorization: Bearer ${{ secrets.HETZNER_API_TOKEN }}" \
-              "https://api.hetzner.cloud/v1/servers?name=$SERVER_NAME" | jq -r '.servers | length')
-            if [ "$SERVER_EXISTS" = "1" ]; then
-              SERVER_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.HETZNER_API_TOKEN }}" \
-                "https://api.hetzner.cloud/v1/servers?name=$SERVER_NAME" | jq -r '.servers[0].id')
-              echo "Found existing server $SERVER_NAME with ID $SERVER_ID, importing into Terraform state..."
-              # Import the server into Terraform state (all vars needed for import)
-              terraform import \
-                -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
-                -var="server_name=$SERVER_NAME" \
-                -var="location=${{ vars.HETZNER_LOCATION }}" \
-                -var="server_type=${{ vars.SERVER_TYPE }}" \
-                -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
-                hcloud_server.main "$SERVER_ID" 2>&1 || echo "Import result: $?"
-            else
-              echo "Server $SERVER_NAME does not exist in Hetzner, will create new"
-            fi
-          fi
-
       - name: Terraform Plan
         id: plan
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
           ENV="${{ github.event.inputs.environment }}"
           SERVER_NAME="${{ vars.SERVER_NAME }}"
-          # Debug: show what's being used
-          echo "DEBUG: environment input = $ENV"
-          echo "DEBUG: vars.SERVER_NAME = $SERVER_NAME"
-          echo "DEBUG: vars.SERVER_NAME is empty = $([ -z "$SERVER_NAME" ] && echo 'YES' || echo 'NO')"
-          # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
-            SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
+            echo "ERROR: SERVER_NAME environment variable is required. Set it in GitHub environment settings."
+            exit 1
           fi
-          echo "DEBUG: final SERVER_NAME = $SERVER_NAME"
+          echo "Using server name: $SERVER_NAME"
           echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform plan -input=false \
@@ -131,15 +100,11 @@ jobs:
         run: |
           ENV="${{ github.event.inputs.environment }}"
           SERVER_NAME="${{ vars.SERVER_NAME }}"
-          # Debug: show what's being used
-          echo "DEBUG: environment input = $ENV"
-          echo "DEBUG: vars.SERVER_NAME = $SERVER_NAME"
-          echo "DEBUG: vars.SERVER_NAME is empty = $([ -z "$SERVER_NAME" ] && echo 'YES' || echo 'NO')"
-          # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
-            SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
+            echo "ERROR: SERVER_NAME environment variable is required. Set it in GitHub environment settings."
+            exit 1
           fi
-          echo "DEBUG: final SERVER_NAME = $SERVER_NAME"
+          echo "Using server name: $SERVER_NAME"
           echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           cd ${{ env.TERRAFORM_DIR }}
           terraform apply -input=false -auto-approve \
@@ -171,9 +136,10 @@ jobs:
         id: outputs
         run: |
           cd ${{ env.TERRAFORM_DIR }}
-          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
           if [ -z "$SERVER_NAME" ]; then
-            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+            echo "ERROR: SERVER_NAME environment variable is required"
+            exit 1
           fi
           IP=$(terraform output -raw ipv4_address)
           echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT

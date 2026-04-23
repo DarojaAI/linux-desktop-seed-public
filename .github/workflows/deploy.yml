@@ -79,12 +79,7 @@ jobs:
         if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          # Check GitHub variables for existing server name
-          case "$ENV" in
-            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
-            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
-            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
-          esac
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
           # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"
@@ -103,12 +98,7 @@ jobs:
         if: github.event.inputs.action == 'apply'
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          # Check GitHub variables for existing server name
-          case "$ENV" in
-            head) SERVER_NAME="${{ vars.HEAD_SERVER_NAME }}" ;;
-            prod) SERVER_NAME="${{ vars.PROD_SERVER_NAME }}" ;;
-            test) SERVER_NAME="${{ vars.TEST_SERVER_NAME }}" ;;
-          esac
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
           # If no server name in vars, create new
           if [ -z "$SERVER_NAME" ]; then
             SERVER_NAME="linux-desktop-$ENV-$(date +%Y%m%d-%H%M%S)"

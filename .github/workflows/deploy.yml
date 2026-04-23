@@ -265,7 +265,7 @@ jobs:
           OPENCLAW_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_CHANNEL_ID }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            'export DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" && export OPENROUTER_API_KEY="$OPENROUTER_API_KEY" && export OPENCLAW_DISCORD_CHANNEL_ID="$OPENCLAW_DISCORD_CHANNEL_ID" && cd /tmp && bash deploy-desktop.sh'
+            "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$OPENCLAW_DISCORD_CHANNEL_ID' && cd /tmp && bash deploy-desktop.sh"
 
       - name: Show connection info
         run: |

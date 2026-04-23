@@ -266,7 +266,7 @@ if 'channels' in config and 'discord' in config.get('channels', {}):
         discord_config['guilds'][guild_id] = {'channels': {}}
     if 'channels' not in discord_config['guilds'][guild_id]:
         discord_config['guilds'][guild_id]['channels'] = {}
-    discord_config['guilds'][guild_id]['channels']['$discord_channel_id'] = {}
+    discord_config['guilds'][guild_id]['channels'][discord_channel_id] = {}
 
 with open('$config_file', 'w') as f:
     json.dump(config, f, indent=2)

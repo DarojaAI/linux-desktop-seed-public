@@ -147,7 +147,7 @@ EOF
 }
 
 setup_openclaw_agent_binding() {
-    log_step "Setting up OpenCLAW agent for this repo..."
+    log_step "Setting up OpenCLAW default agent (linux-desktop-seed)..."
 
     local target_home
     target_home=$(getent passwd "$TARGET_USER" | cut -d: -f6)
@@ -155,50 +155,24 @@ setup_openclaw_agent_binding() {
     local config_file="$openclaw_dir/openclaw.json"
     local projects_dir="$target_home/GithubProjects"
 
-    # Get repo name from SCRIPT_DIR (e.g., "linux-desktop-seed")
-    local repo_name
-    repo_name=$(basename "$SCRIPT_DIR")
-
-    # Determine Discord channel - explicit override or derive from repo name
+    # Channel ID must be provided via GitHub Actions
     local discord_channel_id="${OPENCLAW_DISCORD_CHANNEL_ID:-}"
-    local discord_token="${DISCORD_BOT_TOKEN:-}"
-
-    # If no explicit channel ID, look up channel by name using Discord API
-    if [[ -z "$discord_channel_id" ]] && [[ -n "$discord_token" ]]; then
-        log_info "Looking up Discord channel for #$repo_name..."
-        local guild_id="1485047825967480862"  # no_decaf_milan's server
-
-        # Get channel list from Discord
-        local channel_response
-        channel_response=$(curl -s -X GET "https://discord.com/api/v10/guilds/$guild_id/channels" \
-            -H "Authorization: Bot $discord_token" 2>/dev/null) || true
-
-        if [[ -n "$channel_response" ]]; then
-            # Extract channel ID by name using grep
-            discord_channel_id=$(echo "$channel_response" | grep -o "\"name\":\"$repo_name\"[^}]*\"id\":\"[0-9]*\"" | grep -oE '[0-9]{18,}' | head -1)
-        fi
-
-        if [[ -z "$discord_channel_id" ]]; then
-            log_warn "Could not find Discord channel #$repo_name, skipping agent binding"
-            return 0
-        fi
-        log_info "Found channel ID: $discord_channel_id for #$repo_name"
-    fi
-
     if [[ -z "$discord_channel_id" ]]; then
-        log_warn "No Discord channel ID found (set OPENCLAW_DISCORD_CHANNEL_ID or ensure DISCORD_BOT_TOKEN is available)"
+        log_warn "OPENCLAW_DISCORD_CHANNEL_ID not set, skipping agent binding"
         return 0
     fi
 
-    # Clone the repo if it doesn't exist
+    # Fixed repo name for default agent
+    local repo_name="linux-desktop-seed"
     local repo_dir="$projects_dir/$repo_name"
-    if [[ ! -d "$repo_dir" ]]; then
-        log_info "Cloning repo $repo_name to $repo_dir..."
 
-        # Determine the Git remote URL
+    # Clone the repo if it doesn't exist
+    if [[ ! -d "$repo_dir" ]]; then
+        log_info "Cloning linux-desktop-seed repo..."
+
+        # Get repo URL from current deployment
         local repo_url="${REPO_URL:-}"
         if [[ -z "$repo_url" ]]; then
-            # Try to get from current directory's git config
             if [[ -d "$SCRIPT_DIR/.git" ]]; then
                 repo_url=$(cd "$SCRIPT_DIR" && git remote get-url origin 2>/dev/null) || true
             fi
@@ -207,14 +181,11 @@ setup_openclaw_agent_binding() {
         if [[ -n "$repo_url" ]]; then
             mkdir -p "$projects_dir"
             if git clone "$repo_url" "$repo_dir" 2>/dev/null; then
-                log_info "Repo cloned successfully"
+                log_info "Repo cloned to $repo_dir"
                 chown -R "$TARGET_USER:$TARGET_USER" "$projects_dir"
             else
-                log_warn "Could not clone repo, skipping workspace setup"
-                return 0
+                log_warn "Could not clone repo"
             fi
-        else
-            log_warn "No repo URL available, skipping clone"
         fi
     else
         log_info "Repo already exists at $repo_dir"
@@ -236,19 +207,12 @@ with open('$config_file', 'r') as f:
 # Ensure agents list exists
 if 'agents' not in config:
     config['agents'] = {'list': []}
-
 if 'list' not in config['agents']:
     config['agents']['list'] = []
 
-# Check if agent already exists
-agent_exists = False
-for agent in config['agents']['list']:
-    if agent.get('id') == '$repo_name':
-        agent_exists = True
-        break
-
+# Add linux-desktop-seed agent if not exists
+agent_exists = any(a.get('id') == '$repo_name' for a in config['agents']['list'])
 if not agent_exists:
-    # Add new agent
     agent = {
         'id': '$repo_name',
         'name': '$repo_name',
@@ -258,57 +222,44 @@ if not agent_exists:
     }
     config['agents']['list'].append(agent)
     print(f'Added agent: $repo_name')
-else:
-    print(f'Agent $repo_name already exists')
 
 # Ensure bindings list exists
 if 'bindings' not in config:
     config['bindings'] = []
 
-# Check if binding already exists
-binding_exists = False
-for binding in config['bindings']:
-    if binding.get('agentId') == '$repo_name':
-        binding_exists = True
-        break
-
+# Add binding if not exists
+binding_exists = any(b.get('agentId') == '$repo_name' for b in config['bindings'])
 if not binding_exists:
-    # Add new binding
     binding = {
         'type': 'route',
         'agentId': '$repo_name',
         'match': {
             'channel': 'discord',
-            'peer': {
-                'kind': 'channel',
-                'id': '$discord_channel_id'
-            }
+            'peer': {'kind': 'channel', 'id': '$discord_channel_id'}
         }
     }
     config['bindings'].append(binding)
     print(f'Added binding: $repo_name -> $discord_channel_id')
-else:
-    print(f'Binding for $repo_name already exists')
 
-# Also add channel to allowed list if discord config exists
-if 'channels' in config and 'discord' in config['channels']:
+# Add channel to allowed list
+if 'channels' in config and 'discord' in config.get('channels', {}):
     discord_config = config['channels']['discord']
-    if 'guilds' in discord_config:
-        guild_id = '1485047825967480862'
-        if guild_id not in discord_config['guilds']:
-            discord_config['guilds'][guild_id] = {'channels': {}}
-        if 'channels' not in discord_config['guilds'][guild_id]:
-            discord_config['guilds'][guild_id]['channels'] = {}
-        discord_config['guilds'][guild_id]['channels']['$discord_channel_id'] = {}
+    guild_id = '1485047825967480862'
+    if 'guilds' not in discord_config:
+        discord_config['guilds'] = {}
+    if guild_id not in discord_config['guilds']:
+        discord_config['guilds'][guild_id] = {'channels': {}}
+    if 'channels' not in discord_config['guilds'][guild_id]:
+        discord_config['guilds'][guild_id]['channels'] = {}
+    discord_config['guilds'][guild_id]['channels']['$discord_channel_id'] = {}
 
 with open('$config_file', 'w') as f:
     json.dump(config, f, indent=2)
-
-print('Config updated successfully')
-" || log_warn "Failed to update config with Python"
+print('Config updated')
+" || log_warn "Failed to update config"
 
     chown -R "$TARGET_USER:$TARGET_USER" "$openclaw_dir"
-    log_info "OpenCLAW agent binding complete for $repo_name"
+    log_info "OpenCLAW agent binding complete"
 }
 
 export -f setup_openclaw_config setup_openclaw_systemd_override setup_openclaw_agent_binding

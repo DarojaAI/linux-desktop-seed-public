@@ -124,16 +124,24 @@ jobs:
         id: outputs
         run: |
           cd ${{ env.TERRAFORM_DIR }}
+          SERVER_NAME="${{ github.event.inputs.server_name }}"
+          if [ -z "$SERVER_NAME" ]; then
+            SERVER_NAME="linux-desktop-$(date +%Y%m%d-%H%M%S)"
+          fi
           IP=$(terraform output -raw ipv4_address)
+          echo "server_name=$SERVER_NAME" >> $GITHUB_OUTPUT
           echo "server_ip=$IP" >> $GITHUB_OUTPUT
+          echo "$SERVER_NAME" > server-name.txt
           echo "$IP" > server-ip.txt
 
       - name: Upload server IP
         if: github.event.inputs.action == 'apply'
         uses: actions/upload-artifact@v4
         with:
-          name: server-ip
-          path: ${{ env.TERRAFORM_DIR }}/server-ip.txt
+          name: server-info
+          path: |
+            ${{ env.TERRAFORM_DIR }}/server-ip.txt
+            ${{ env.TERRAFORM_DIR }}/server-name.txt
 
       - name: Upload Terraform state
         if: github.event.inputs.action == 'apply'
@@ -153,17 +161,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download server IP
+      - name: Download server info
         uses: actions/download-artifact@v4
         with:
-          name: server-ip
+          name: server-info
           path: ${{ env.TERRAFORM_DIR }}/
 
-      - name: Get server IP
+      - name: Get server info
         run: |
+          SERVER_NAME=$(cat ${{ env.TERRAFORM_DIR }}/server-name.txt)
           IP=$(cat ${{ env.TERRAFORM_DIR }}/server-ip.txt)
+          echo "SERVER_NAME=$SERVER_NAME" >> $GITHUB_ENV
           echo "SERVER_IP=$IP" >> $GITHUB_ENV
-          echo "Server IP: $IP"
+          echo "Server: $SERVER_NAME ($IP)"
 
       - name: Wait for server to be ready
         run: |

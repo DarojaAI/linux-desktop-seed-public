@@ -191,19 +191,35 @@ EOF
         log_warn "Could not enable linger (may already be enabled or requires systemd-logind)"
     fi
 
-    # Enable and start the service - must run as the target user
-    log_info "Enabling and starting OpenCLAW gateway service..."
-    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user daemon-reload
-    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user enable openclaw-gateway.service
-    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user start openclaw-gateway.service
+    # Start the gateway directly (systemd user services require an active session)
+    # The systemd service file is in place for when the user connects via RDP
+    log_info "Starting OpenCLAW gateway directly..."
+    local user_id
+    user_id=$(id -u "$TARGET_USER")
 
-    # Wait a moment and check status
-    sleep 2
-    if sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user is-active --quiet openclaw-gateway.service; then
-        log_info "OpenCLAW gateway service is running"
-    else
-        log_warn "OpenCLAW gateway service may not have started properly, check logs with: journalctl --user -u openclaw-gateway.service"
+    # Get environment from override file
+    local env_args=""
+    if [[ -f "$override_file" ]]; then
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^Environment= ]] || continue
+            key="${key#Environment=}"
+            env_args="$env_args $key=$value"
+        done < "$override_file"
     fi
+
+    # Start gateway in background with proper environment
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$user_id" env $env_args nohup openclaw gateway --port 18789 > /var/log/openclaw-gateway.log 2>&1 &
+    local gateway_pid=$!
+
+    sleep 2
+    if kill -0 "$gateway_pid" 2>/dev/null; then
+        log_info "OpenCLAW gateway started (PID: $gateway_pid)"
+        echo "$gateway_pid" > /var/run/openclaw-gateway.pid
+    else
+        log_warn "OpenCLAW gateway may not have started, check /var/log/openclaw-gateway.log"
+    fi
+
+    log_info "Note: systemd service will be available after user connects via RDP"
 
     log_info "OpenCLAW systemd service created at $service_file"
 }

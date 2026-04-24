@@ -184,15 +184,22 @@ EOF
     # Set ownership
     chown -R "$TARGET_USER:$TARGET_USER" "$service_dir"
 
-    # Enable and start the service
+    # Enable linger for the user - allows systemd user services to run without active session
+    # This is required because the deployment runs via SSH, not an interactive session
+    log_info "Enabling linger for user $TARGET_USER..."
+    if ! loginctl enable-linger "$TARGET_USER" 2>/dev/null; then
+        log_warn "Could not enable linger (may already be enabled or requires systemd-logind)"
+    fi
+
+    # Enable and start the service - must run as the target user
     log_info "Enabling and starting OpenCLAW gateway service..."
-    systemctl --user daemon-reload
-    systemctl --user enable openclaw-gateway.service
-    systemctl --user start openclaw-gateway.service
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user daemon-reload
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user enable openclaw-gateway.service
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user start openclaw-gateway.service
 
     # Wait a moment and check status
     sleep 2
-    if systemctl --user is-active --quiet openclaw-gateway.service; then
+    if sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" systemctl --user is-active --quiet openclaw-gateway.service; then
         log_info "OpenCLAW gateway service is running"
     else
         log_warn "OpenCLAW gateway service may not have started properly, check logs with: journalctl --user -u openclaw-gateway.service"

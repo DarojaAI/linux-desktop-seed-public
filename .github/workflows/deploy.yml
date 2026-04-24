@@ -253,7 +253,7 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENCLAW_DISCORD_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_CHANNEL_ID }}
+          OPENCLAW_DISCORD_CHANNEL_ID: ${{ vars.OPENCLAW_DISCORD_CHANNEL_ID }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
             "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$OPENCLAW_DISCORD_CHANNEL_ID' && cd /tmp && bash deploy-desktop.sh"

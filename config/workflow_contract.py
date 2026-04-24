@@ -25,6 +25,17 @@ class HetznerEnvironment(BaseModel):
     hetzner_ssh_key_name: str = Field(description="SSH key name registered in Hetzner")
     hcx_storage_url: str = Field(description="HCX S3 endpoint URL for Terraform state")
 
+    # === OpenCLAW Configuration (environment-specific, via GitHub env vars) ===
+    openclaw_discord_channel_id: str = Field(
+        description="Discord channel ID for bindings - from GitHub env var"
+    )
+    openclaw_discord_allowed_user: str = Field(
+        description="Discord user ID allowed to interact - from GitHub env var (format: user:XXXXXXXX)"
+    )
+    openclaw_discord_guild_id: str = Field(
+        description="Discord guild/server ID - from GitHub env var"
+    )
+
     # === GitHub Environment Secrets ===
     hetzner_api_token: str = Field(description="Hetzner API token for server provisioning")
     hcx_access_key: str = Field(description="HCX S3 access key for state storage")
@@ -32,9 +43,6 @@ class HetznerEnvironment(BaseModel):
     ssh_private_key: str = Field(description="Private key for SSH access to server")
 
     # === OpenCLAW Secrets (passed to deployment) ===
-    openclaw_discord_channel_id: str = Field(
-        description="Discord channel ID - comes from GitHub env, NOT hardcoded"
-    )
     discord_bot_token: str = Field(description="Discord bot token for OpenCLAW")
     openrouter_api_key: str = Field(description="OpenRouter API key for AI calls")
 
@@ -63,21 +71,23 @@ class WorkflowConfig(BaseModel):
 #   SERVER_TYPE=cx23
 #   HETZNER_SSH_KEY_NAME=hetzner-test
 #   HCX_STORAGE_URL=https://s3.xxx.huawei.com
+#   OPENCLAW_DISCORD_CHANNEL_ID=1496398999928967238
+#   OPENCLAW_DISCORD_ALLOWED_USER=user:1162240440322502656
+#   OPENCLAW_DISCORD_GUILD_ID=1485047825967480862
 #
 # Secrets:
 #   HETZNER_API_TOKEN=xxx
 #   HCX_ACCESS_KEY=xxx
 #   HCX_SECRET_KEY=xxx
 #   SSH_PRIVATE_KEY=xxx
-#   OPENCLAW_DISCORD_CHANNEL_ID=xxx  <- channel from GitHub, not hardcoded
 #   DISCORD_BOT_TOKEN=xxx
 #   OPENROUTER_API_KEY=xxx
 
 # =============================================================================
 # Key Principles
 # =============================================================================
-# 1. Channel ID NEVER hardcoded - always comes from OPENCLAW_DISCORD_CHANNEL_ID
+# 1. ALL config values from ideal-config that vary per environment MUST come from GitHub Environment variables
 # 2. Config template: config/openclaw-ideal-config.json
 # 3. Terraform state stored in HCX S3, not local
 # 4. Existing servers imported via hcloud CLI before apply
-# 5. All environment-specific values come from GitHub Environment settings
+# 5. NO hardcoded values in scripts - all from GitHub Environment settings

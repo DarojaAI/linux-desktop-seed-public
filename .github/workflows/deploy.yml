@@ -257,9 +257,11 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENCLAW_DISCORD_CHANNEL_ID: ${{ vars.OPENCLAW_DISCORD_CHANNEL_ID }}
+          OPENCLAW_DISCORD_ALLOWED_USER: ${{ vars.OPENCLAW_DISCORD_ALLOWED_USER }}
+          OPENCLAW_DISCORD_GUILD_ID: ${{ vars.OPENCLAW_DISCORD_GUILD_ID }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
-            "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$OPENCLAW_DISCORD_CHANNEL_ID' && cd /tmp && bash deploy-desktop.sh"
+            "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$OPENCLAW_DISCORD_CHANNEL_ID' && export OPENCLAW_DISCORD_ALLOWED_USER='$OPENCLAW_DISCORD_ALLOWED_USER' && export OPENCLAW_DISCORD_GUILD_ID='$OPENCLAW_DISCORD_GUILD_ID' && cd /tmp && bash deploy-desktop.sh"
 
       - name: Show connection info
         run: |

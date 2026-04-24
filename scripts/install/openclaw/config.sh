@@ -18,6 +18,8 @@ setup_openclaw_config() {
     local config_file="$openclaw_dir/openclaw.json"
     local models_file="$openclaw_dir/agents/main/agent/models.json"
     local discord_channel_id="${OPENCLAW_DISCORD_CHANNEL_ID:-}"
+    local discord_allowed_user="${OPENCLAW_DISCORD_ALLOWED_USER:-}"
+    local discord_guild_id="${OPENCLAW_DISCORD_GUILD_ID:-}"
 
     mkdir -p "$openclaw_dir/agents/main/agent"
 
@@ -66,8 +68,8 @@ setup_openclaw_config() {
       "enabled": true,
       "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
       "groupPolicy": "allowlist",
-      "allowlist": [],
       "streaming": { "mode": "off" },
+      "allowFrom": [ "user:1162240440322502656" ],
       "guilds": {
         "1485047825967480862": {
           "requireMention": false,
@@ -176,6 +178,8 @@ setup_openclaw_agent_binding() {
 
     # Channel ID must be provided via GitHub Actions
     local discord_channel_id="${OPENCLAW_DISCORD_CHANNEL_ID:-}"
+    local discord_allowed_user="${OPENCLAW_DISCORD_ALLOWED_USER:-}"
+    local discord_guild_id="${OPENCLAW_DISCORD_GUILD_ID:-}"
     if [[ -z "$discord_channel_id" ]]; then
         log_warn "OPENCLAW_DISCORD_CHANNEL_ID not set, skipping agent binding"
         return 0
@@ -218,6 +222,8 @@ setup_openclaw_agent_binding() {
 
     # Use Python to add agent and binding - pass bash vars as env vars to avoid interpolation issues
     discord_channel_id="$discord_channel_id" \
+    discord_allowed_user="$discord_allowed_user" \
+    discord_guild_id="$discord_guild_id" \
     repo_name="$repo_name" \
     repo_dir="$repo_dir" \
     openclaw_dir="$openclaw_dir" \
@@ -230,6 +236,8 @@ repo_name = os.environ.get('repo_name', 'linux-desktop-seed')
 repo_dir = os.environ.get('repo_dir', '')
 openclaw_dir = os.environ.get('openclaw_dir', '')
 discord_channel_id = os.environ.get('discord_channel_id', '')
+discord_allowed_user = os.environ.get('discord_allowed_user', '')
+discord_guild_id = os.environ.get('discord_guild_id', '')
 
 if not discord_channel_id:
     print('No discord_channel_id provided, skipping binding')
@@ -278,7 +286,10 @@ if not binding_exists:
 # Add channel to allowed list
 if 'channels' in config and 'discord' in config.get('channels', {}):
     discord_config = config['channels']['discord']
-    guild_id = '1485047825967480862'
+    guild_id = discord_guild_id if discord_guild_id else ''
+    if not guild_id:
+        print('ERROR: OPENCLAW_DISCORD_GUILD_ID not set')
+        sys.exit(1)
     if 'guilds' not in discord_config:
         discord_config['guilds'] = {}
     if guild_id not in discord_config['guilds']:

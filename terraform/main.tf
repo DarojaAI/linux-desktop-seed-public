@@ -12,14 +12,15 @@ terraform {
     }
   }
   backend "s3" {
-    endpoint                    = "https://fc.europe-west1.myhuaweicloud.com"
+    endpoint                    = "https://s3.fra1.cloudprovider.de"
     bucket                      = "terraform-state-linux-desktop"
     key                         = "head/terraform.tfstate"
-    region                      = "eu-central-1"
+    region                      = "fra1"
     access_key                  = var.hcx_access_key
     secret_key                  = var.hcx_secret_key
     skip_credentials_validation = true
     skip_metadata_api_check     = true
+    force_path_style            = true
   }
 }
 

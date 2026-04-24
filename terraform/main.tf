@@ -12,7 +12,9 @@ terraform {
     }
   }
   backend "s3" {
-    endpoint                    = "https://s3.fra1.cloudprovider.de"
+    endpoints {
+      s3 = "https://s3.fra1.cloudprovider.de"
+    }
     bucket                      = "terraform-state-linux-desktop"
     key                         = "head/terraform.tfstate"
     region                      = "fra1"
@@ -21,6 +23,7 @@ terraform {
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_region_validation      = true
+    skip_requesting_account_id  = true
     force_path_style            = true
   }
 }

@@ -123,7 +123,14 @@ jobs:
           SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r ".[] | select(.name == \"$SERVER_NAME\") | .id")
           if [ -n "$SERVER_ID" ]; then
             echo "Found existing server $SERVER_NAME with ID $SERVER_ID, importing into state..."
-            terraform import hcloud_server.main "$SERVER_ID"
+            terraform import -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+              -var="server_name=$SERVER_NAME" \
+              -var="location=${{ vars.HETZNER_LOCATION }}" \
+              -var="server_type=${{ vars.SERVER_TYPE }}" \
+              -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
+              -var="hcx_access_key=${{ secrets.HCX_ACCESS_KEY }}" \
+              -var="hcx_secret_key=${{ secrets.HCX_SECRET_KEY }}" \
+              hcloud_server.main "$SERVER_ID"
           else
             echo "No existing server found, will create new one"
           fi

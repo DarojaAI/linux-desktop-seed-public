@@ -45,6 +45,14 @@ setup_openclaw_config() {
         fi
     fi
 
+    # Update token if it's still a placeholder but we have a real token
+    if [[ -n "$discord_token" && -f "$config_file" ]]; then
+        if grep -q 'DISCORD_BOT_TOKEN_PLACEHOLDER\|DISCORD_BOT_TOKEN"' "$config_file" 2>/dev/null; then
+            should_update=true
+            log_info "Config has placeholder token, will update"
+        fi
+    fi
+
     if [[ "$should_update" == "true" ]]; then
         local repo_config="$(dirname "$SCRIPT_DIR")/config/openclaw-defaults.json"
         if [[ -f "$repo_config" ]]; then

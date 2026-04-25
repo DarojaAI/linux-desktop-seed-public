@@ -197,18 +197,16 @@ EOF
     local user_id
     user_id=$(id -u "$TARGET_USER")
 
-    # Get environment from override file
-    local env_args=""
+    # Get environment from override file - explicitly export for gateway
     if [[ -f "$override_file" ]]; then
         while IFS='=' read -r key value; do
             [[ "$key" =~ ^Environment= ]] || continue
-            key="${key#Environment=}"
-            env_args="$env_args $key=$value"
+            export "${key#Environment=}=$value"
         done < "$override_file"
     fi
 
     # Start gateway in background with proper environment
-    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$user_id" env $env_args nohup openclaw gateway --port 18789 > /var/log/openclaw-gateway.log 2>&1 &
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$user_id" nohup openclaw gateway --port 18789 > /var/log/openclaw-gateway.log 2>&1 &
     local gateway_pid=$!
 
     sleep 2

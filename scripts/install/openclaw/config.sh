@@ -49,10 +49,17 @@ setup_openclaw_config() {
     if [[ "$should_update" == "true" ]]; then
         local repo_config="$(dirname "$SCRIPT_DIR")/../../config/openclaw-defaults.json"
         if [[ -f "$repo_config" ]]; then
+            # Copy default config and replace token placeholder with actual token
             cp "$repo_config" "$config_file"
+            if [[ -n "$discord_token" ]]; then
+                sed -i "s/DISCORD_BOT_TOKEN_PLACEHOLDER/$discord_token/g" "$config_file"
+                log_info "Updated Discord token in config"
+            fi
             log_info "Copied OpenCLAW default config"
         else
-            cat > "$config_file" << 'EOF'
+            # Create config with token if available, otherwise use placeholder
+            local token_value="${discord_token:-DISCORD_BOT_TOKEN_PLACEHOLDER}"
+            cat > "$config_file" << EOF
 {
   "meta": {
     "lastTouchedVersion": "2026.04.11"
@@ -66,17 +73,11 @@ setup_openclaw_config() {
   "channels": {
     "discord": {
       "enabled": true,
-      "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
+      "token": "$token_value",
       "groupPolicy": "allowlist",
       "streaming": { "mode": "off" },
-      "allowFrom": [ "user:1162240440322502656" ],
-      "guilds": {
-        "1485047825967480862": {
-          "requireMention": false,
-          "users": ["1162240440322502656"],
-          "channels": {}
-        }
-      }
+      "allowFrom": [],
+      "guilds": {}
     }
   },
   "gateway": {

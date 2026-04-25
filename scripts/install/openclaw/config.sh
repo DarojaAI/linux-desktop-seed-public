@@ -237,6 +237,8 @@ setup_openclaw_agent_binding() {
     # Ensure git remote is set to correct GitHub URL
     if [[ -d "$repo_dir/.git" ]]; then
         cd "$repo_dir"
+        # Fix dubious ownership issue
+        git config --global --add safe.directory "$repo_dir" 2>/dev/null || true
         if ! git remote get-url origin &>/dev/null; then
             log_info "Adding git remote origin..."
             git remote add origin https://github.com/DarojaAI/linux-desktop-seed.git

@@ -125,3 +125,106 @@ download_file() {
         return 1
     fi
 }
+
+# Verify directory exists, create if needed
+verify_dir() {
+    local dir="$1"
+    local create_if_missing=${2:-true}
+
+    if [[ -z "$dir" ]]; then
+        log_error "verify_dir: No directory path provided"
+        return 1
+    fi
+
+    if [[ -d "$dir" ]]; then
+        return 0
+    elif [[ "$create_if_missing" == "true" ]]; then
+        if mkdir -p "$dir" 2>/dev/null; then
+            log_info "Created directory: $dir"
+            return 0
+        else
+            log_error "Failed to create directory: $dir"
+            return 1
+        fi
+    else
+        log_error "Directory does not exist: $dir"
+        return 1
+    fi
+}
+
+# Verify file exists
+verify_file() {
+    local file="$1"
+
+    if [[ -z "$file" ]]; then
+        log_error "verify_file: No file path provided"
+        return 1
+    fi
+
+    if [[ -f "$file" ]]; then
+        return 0
+    else
+        log_error "File does not exist: $file"
+        return 1
+    fi
+}
+
+# Verify command is available
+verify_command() {
+    local cmd="$1"
+
+    if [[ -z "$cmd" ]]; then
+        log_error "verify_command: No command provided"
+        return 1
+    fi
+
+    if command -v "$cmd" &>/dev/null; then
+        return 0
+    else
+        log_error "Command not found: $cmd"
+        return 1
+    fi
+}
+
+# Run command as specific user safely
+run_as_user() {
+    local user="$1"
+    shift
+
+    if [[ -z "$user" ]]; then
+        log_error "run_as_user: No user specified"
+        return 1
+    fi
+
+    if id "$user" &>/dev/null; then
+        sudo -u "$user" "$@"
+    else
+        log_error "User does not exist: $user"
+        return 1
+    fi
+}
+
+# Validate that a path is safe (no dangerous characters)
+validate_path() {
+    local path="$1"
+    local description="${2:-path}"
+
+    if [[ -z "$path" ]]; then
+        log_error "validate_path: No $description provided"
+        return 1
+    fi
+
+    # Check for dangerous characters
+    if [[ "$path" =~ [;&|`$(){}*?<>] ]]; then
+        log_error "Invalid characters in $description: $path"
+        return 1
+    fi
+
+    # Check for path traversal attempts
+    if [[ "$path" =~ \.\./ ]]; then
+        log_error "Path traversal detected in $description: $path"
+        return 1
+    fi
+
+    return 0
+}

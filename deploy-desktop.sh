@@ -76,6 +76,9 @@ main() {
     log_info "Starting Remote Desktop Deployment v$SCRIPT_VERSION"
     log_info "Log file: $LOG_FILE"
 
+    # Validate critical configuration
+    validate_deployment_config
+
     check_root
     detect_ubuntu_version
 
@@ -161,24 +164,87 @@ install_maintenance_scripts() {
     fi
 
     # Create target directory
-    mkdir -p "$target_dir"
+    if ! mkdir -p "$target_dir" 2>/dev/null; then
+        log_error "Failed to create maintenance scripts directory: $target_dir"
+        return 1
+    fi
 
-    # Copy all maintenance scripts
+    # Copy all maintenance scripts with validation
+    local scripts_copied=0
     for script in "$scripts_dir"/*.sh; do
         if [[ -f "$script" ]]; then
-            cp "$script" "$target_dir/"
-            chmod +x "$target_dir/$(basename "$script")"
-            log_info "  Installed: $(basename "$script")"
+            local script_name
+            script_name=$(basename "$script")
+
+            # Validate script syntax before copying
+            if bash -n "$script" 2>/dev/null; then
+                if cp "$script" "$target_dir/" && chmod +x "$target_dir/$script_name"; then
+                    log_info "  Installed: $script_name"
+                    scripts_copied=$((scripts_copied + 1))
+                else
+                    log_warn "  Failed to copy: $script_name"
+                fi
+            else
+                log_warn "  Skipped (syntax error): $script_name"
+            fi
         fi
     done
 
-    # Set ownership
-    chown -R "$TARGET_USER:$TARGET_USER" "$target_dir"
+    if [[ $scripts_copied -eq 0 ]]; then
+        log_warn "No maintenance scripts were installed"
+    else
+        # Set ownership
+        chown -R "$TARGET_USER:$TARGET_USER" "$target_dir" 2>/dev/null || \
+            log_warn "Could not change ownership of maintenance scripts"
+
+        log_info "Installed $scripts_copied maintenance script(s)"
+    fi
 
     # Setup SSH config for maintenance access to other VMs
     setup_ssh_config
 
-    log_info "Maintenance scripts installed to $target_dir"
+    log_info "Maintenance scripts installation complete"
+}
+
+# Validate deployment configuration before starting
+validate_deployment_config() {
+    log_info "Validating deployment configuration..."
+    local errors=0
+
+    # Validate TARGET_USER
+    if [[ -z "$TARGET_USER" ]]; then
+        log_error "TARGET_USER is not set"
+        errors=$((errors + 1))
+    elif ! id "$TARGET_USER" &>/dev/null && [[ "$1" != "create_desktop_user" ]]; then
+        # Will be created later, but warn if definitely missing
+        log_warn "TARGET_USER '$TARGET_USER' does not exist yet (will be created)"
+    fi
+
+    # Validate SCRIPT_DIR
+    if [[ -z "$SCRIPT_DIR" ]]; then
+        log_error "SCRIPT_DIR is not set"
+        errors=$((errors + 1))
+    elif [[ ! -d "$SCRIPT_DIR" ]]; then
+        log_error "SCRIPT_DIR does not exist: $SCRIPT_DIR"
+        errors=$((errors + 1))
+    fi
+
+    # Validate LOG_FILE path is writable
+    if [[ -n "$LOG_FILE" ]]; then
+        local log_dir
+        log_dir=$(dirname "$LOG_FILE")
+        if [[ ! -d "$log_dir" ]] && ! mkdir -p "$log_dir" 2>/dev/null; then
+            log_error "Cannot create log directory: $log_dir"
+            errors=$((errors + 1))
+        fi
+    fi
+
+    if [[ $errors -gt 0 ]]; then
+        log_error "Deployment configuration has $errors error(s)"
+        exit 1
+    fi
+
+    log_info "Configuration validation passed"
 }
 
 setup_ssh_config() {

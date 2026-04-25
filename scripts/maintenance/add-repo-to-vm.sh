@@ -59,13 +59,13 @@ echo "=== Adding repo $REPO to $TARGET_VM ==="
 echo "Channel: $CHANNEL_NAME"
 echo ""
 
-# Execute on target VM
-ssh "$TARGET_VM" << EOF
+# Execute on target VM as desktopuser
+ssh "$TARGET_VM" "sudo -u desktopuser bash" << EOF
 set -euo pipefail
 
-PROJECTS_DIR="\$HOME/Projects"
+PROJECTS_DIR="/home/desktopuser/Projects"
 AGENT_ID="$REPO_NAME"
-AGENT_DIR="\$HOME/.openclaw/agents/\${AGENT_ID}"
+AGENT_DIR="/home/desktopuser/.openclaw/agents/\${AGENT_ID}"
 REPO_URL="https://github.com/$REPO.git"
 
 echo "--- Step 1: Clone Repository ---"
@@ -75,7 +75,18 @@ cd "\$PROJECTS_DIR"
 if [[ -d "\$REPO_NAME" ]]; then
     echo "Repository \$REPO_NAME already exists"
     cd "\$REPO_NAME"
-    git pull origin \$(git branch --show-current)
+    # Ensure remote is set to correct URL
+    if ! git remote get-url origin &>/dev/null; then
+        echo "No remote configured, adding origin..."
+        git remote add origin "\$REPO_URL"
+    else
+        CURRENT_REMOTE=\$(git remote get-url origin)
+        if [[ "\$CURRENT_REMOTE" != "\$REPO_URL" ]]; then
+            echo "Remote URL mismatch, updating origin..."
+            git remote set-url origin "\$REPO_URL"
+        fi
+    fi
+    git pull origin \$(git branch --show-current) || echo "Pull failed or nothing to pull"
 else
     git clone "\$REPO_URL" "\$REPO_NAME"
     cd "\$REPO_NAME"
@@ -133,13 +144,12 @@ echo "✓ auth-profiles.json copied"
 echo ""
 
 echo "--- Step 6: Set Permissions ---"
-chown -R desktopuser:desktopuser "\${AGENT_DIR}"
 chmod -R 700 "\${AGENT_DIR}/agent/memory"
 echo "✓ Permissions set"
 echo ""
 
 echo "--- Step 7: Restart OpenCLAW Gateway ---"
-pkill -f 'openclaw gateway' || true
+sudo pkill -f 'openclaw gateway' || true
 sleep 2
 cd "\$HOME"
 nohup openclaw gateway > /tmp/openclaw-gateway.log 2>&1 &

@@ -175,7 +175,75 @@ install_maintenance_scripts() {
     # Set ownership
     chown -R "$TARGET_USER:$TARGET_USER" "$target_dir"
 
+    # Setup SSH config for maintenance access to other VMs
+    setup_ssh_config
+
     log_info "Maintenance scripts installed to $target_dir"
+}
+
+setup_ssh_config() {
+    log_info "Setting up SSH config for maintenance access..."
+
+    local ssh_dir="/home/$TARGET_USER/.ssh"
+    local config_file="$ssh_dir/config"
+
+    # Create .ssh directory if it doesn't exist
+    mkdir -p "$ssh_dir"
+    chown "$TARGET_USER:$TARGET_USER" "$ssh_dir"
+    chmod 700 "$ssh_dir"
+
+    # Add SSH config entries for known VMs (if not already present)
+    if [[ ! -f "$config_file" ]]; then
+        touch "$config_file"
+        chown "$TARGET_USER:$TARGET_USER" "$config_file"
+        chmod 600 "$config_file"
+    fi
+
+    # Add prod config if not exists
+    if ! grep -q "^Host prod$" "$config_file" 2>/dev/null; then
+        cat >> "$config_file" << 'EOF'
+
+Host prod
+    HostName 204.168.182.32
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ServerAliveInterval 60
+EOF
+        log_info "  Added SSH config for prod"
+    fi
+
+    # Add test config if not exists
+    if ! grep -q "^Host test$" "$config_file" 2>/dev/null; then
+        cat >> "$config_file" << 'EOF'
+
+Host test
+    HostName 95.217.10.37
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    StrictHostKeyChecking accept-new
+    ServerAliveInterval 60
+EOF
+        log_info "  Added SSH config for test"
+    fi
+
+    # Copy root's SSH key to desktopuser if it exists and desktopuser doesn't have one
+    if [[ -f "/root/.ssh/id_ed25519" && ! -f "$ssh_dir/id_ed25519" ]]; then
+        cp /root/.ssh/id_ed25519 "$ssh_dir/id_ed25519"
+        chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/id_ed25519"
+        chmod 600 "$ssh_dir/id_ed25519"
+        log_info "  Copied SSH key to desktopuser"
+    fi
+
+    # Copy root's known_hosts if desktopuser doesn't have one
+    if [[ -f "/root/.ssh/known_hosts" && ! -f "$ssh_dir/known_hosts" ]]; then
+        cp /root/.ssh/known_hosts "$ssh_dir/known_hosts"
+        chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/known_hosts"
+        chmod 600 "$ssh_dir/known_hosts"
+        log_info "  Copied known_hosts to desktopuser"
+    fi
+
+    log_info "SSH config setup complete"
 }
 
 main "$@"

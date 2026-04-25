@@ -236,23 +236,37 @@ setup_openclaw_agent_binding() {
 
     # Ensure git remote is set to correct GitHub URL
     if [[ -d "$repo_dir/.git" ]]; then
-        cd "$repo_dir"
-        # Fix dubious ownership issue
+        log_info "Configuring git for $repo_dir..."
+        # Fix dubious ownership issue - try both root and target user
         git config --global --add safe.directory "$repo_dir" 2>/dev/null || true
-        if ! git remote get-url origin &>/dev/null; then
-            log_info "Adding git remote origin..."
-            git remote add origin https://github.com/DarojaAI/linux-desktop-seed.git
+        sudo -u "$TARGET_USER" git config --global --add safe.directory "$repo_dir" 2>/dev/null || true
+
+        # Change ownership to target user if needed
+        if [[ -O "$repo_dir" ]]; then
+            log_info "Repo already owned by current user"
         else
-            current_remote=$(git remote get-url origin)
-            if [[ "$current_remote" != "https://github.com/DarojaAI/linux-desktop-seed.git" ]]; then
-                log_info "Updating git remote to correct URL..."
-                git remote set-url origin https://github.com/DarojaAI/linux-desktop-seed.git
-            fi
+            chown -R "$TARGET_USER:$TARGET_USER" "$repo_dir" 2>/dev/null || log_warn "Could not change repo ownership"
         fi
-        # Pull latest changes
-        log_info "Pulling latest changes..."
-        git fetch origin || true
-        git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || true
+
+        # Now configure remote as target user
+        sudo -u "$TARGET_USER" bash -c "cd '$repo_dir' && {
+            if ! git remote get-url origin &>/dev/null; then
+                echo 'Adding git remote origin...'
+                git remote add origin https://github.com/DarojaAI/linux-desktop-seed.git
+            else
+                current_remote=\$(git remote get-url origin)
+                if [[ \"\$current_remote\" != 'https://github.com/DarojaAI/linux-desktop-seed.git' ]]; then
+                    echo 'Updating git remote to correct URL...'
+                    git remote set-url origin https://github.com/DarojaAI/linux-desktop-seed.git
+                fi
+            fi
+            # Pull latest changes
+            echo 'Pulling latest changes...'
+            git fetch origin 2>/dev/null || true
+            git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || echo 'Pull skipped (no remote or no changes)'
+        }" || log_warn "Failed to configure git remote"
+    else
+        log_warn "No git repository found at $repo_dir"
     fi
 
     # Check if config exists

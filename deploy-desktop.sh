@@ -228,22 +228,56 @@ EOF
     fi
 
     # Copy root's SSH key to desktopuser if it exists and desktopuser doesn't have one
-    if [[ -f "/root/.ssh/id_ed25519" && ! -f "$ssh_dir/id_ed25519" ]]; then
-        cp /root/.ssh/id_ed25519 "$ssh_dir/id_ed25519"
-        chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/id_ed25519"
-        chmod 600 "$ssh_dir/id_ed25519"
-        log_info "  Copied SSH key to desktopuser"
+    if [[ -f "/root/.ssh/id_ed25519" ]]; then
+        if [[ -f "$ssh_dir/id_ed25519" ]]; then
+            log_info "  SSH key already exists for desktopuser"
+        else
+            if cp /root/.ssh/id_ed25519 "$ssh_dir/id_ed25519" 2>/dev/null; then
+                chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/id_ed25519"
+                chmod 600 "$ssh_dir/id_ed25519"
+                log_info "  Copied SSH key to desktopuser"
+            else
+                log_warn "  Could not copy SSH key to desktopuser"
+            fi
+        fi
+    else
+        log_warn "  No SSH key found at /root/.ssh/id_ed25519"
     fi
 
     # Copy root's known_hosts if desktopuser doesn't have one
-    if [[ -f "/root/.ssh/known_hosts" && ! -f "$ssh_dir/known_hosts" ]]; then
-        cp /root/.ssh/known_hosts "$ssh_dir/known_hosts"
-        chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/known_hosts"
-        chmod 600 "$ssh_dir/known_hosts"
-        log_info "  Copied known_hosts to desktopuser"
+    if [[ -f "/root/.ssh/known_hosts" ]]; then
+        if cp /root/.ssh/known_hosts "$ssh_dir/known_hosts" 2>/dev/null; then
+            chown "$TARGET_USER:$TARGET_USER" "$ssh_dir/known_hosts"
+            chmod 600 "$ssh_dir/known_hosts"
+            log_info "  Copied known_hosts to desktopuser"
+        else
+            log_warn "  Could not copy known_hosts to desktopuser"
+        fi
     fi
 
-    log_info "SSH config setup complete"
+    # Validate SSH config
+    log_info "Validating SSH configuration..."
+    local ssh_errors=0
+
+    if [[ ! -d "$ssh_dir" ]]; then
+        log_error "  SSH directory not created: $ssh_dir"
+        ssh_errors=$((ssh_errors + 1))
+    fi
+
+    if [[ ! -f "$ssh_dir/config" ]]; then
+        log_error "  SSH config file not created: $ssh_dir/config"
+        ssh_errors=$((ssh_errors + 1))
+    fi
+
+    if [[ ! -f "$ssh_dir/id_ed25519" ]]; then
+        log_warn "  No SSH private key for desktopuser"
+    fi
+
+    if [[ $ssh_errors -gt 0 ]]; then
+        log_error "SSH config setup had $ssh_errors errors"
+    else
+        log_info "SSH config setup complete and validated"
+    fi
 }
 
 main "$@"

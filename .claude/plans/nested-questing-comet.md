@@ -126,16 +126,18 @@ Currently hardcoded to `key = "head/terraform.tfstate"`. Could make environment-
 
 ## Implementation Order
 
-| Step | Description | Type |
-|------|-------------|------|
-| 1 | Deploy head VM via GitHub Actions | Context |
-| 2 | Set up SSH keys on head (manual) | Context |
-| 3 | Distribute SSH keys to prod/test | Context |
-| 4 | Update maintenance SKILL.md for head | Repo |
-| 5 | Create cross-vm-monitor.sh | Repo |
-| 6 | Update deploy.yml for env selection | Repo |
-| 7 | Bind dev-nexus channel to head | Context |
-| 8 | Test: send command to dev-nexus | Verify |
+| Step | Description | Type | Status |
+|------|-------------|------|--------|
+| 1 | Deploy head VM via GitHub Actions | Context | ✅ Done |
+| 2 | Set up SSH keys on head (manual) | Context | 🔄 In Progress |
+| 3 | Distribute SSH keys to prod/test | Context | ⏳ Pending |
+| 4 | Update maintenance SKILL.md for head | Repo | ⏳ Pending |
+| 5 | Create cross-vm-monitor.sh | Repo | ⏳ Pending |
+| 6 | Update deploy.yml for env selection | Repo | ⏳ Pending |
+| 7 | Bind dev-nexus channel to head | Context | ⏳ Pending |
+| 8 | Test: send command to dev-nexus | Verify | ⏳ Pending |
+
+**SSH setup options documented in:** `docs-private/head-ssh-setup-options.md`
 
 ## Verification
 

@@ -109,26 +109,6 @@ EOF
     else
         log_info "OpenCLAW config already exists"
     fi
-  "channels": {
-    "discord": {
-      "enabled": true,
-      "token": "$token_value",
-      "groupPolicy": "allowlist",
-      "streaming": { "mode": "off" },
-      "allowFrom": [],
-      "guilds": {}
-    }
-  },
-  "gateway": {
-    "mode": "local"
-  }
-}
-EOF
-            log_info "Created minimal OpenCLAW config with Discord"
-        fi
-    else
-        log_info "OpenCLAW config already exists"
-    fi
 
     if [[ ! -f "$models_file" ]]; then
         local repo_models

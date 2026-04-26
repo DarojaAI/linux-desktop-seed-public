@@ -44,9 +44,6 @@ setup_environment() {
 # OpenRouter API (required for Claude Code)
 export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 
-# GitHub token for CI/CD operations from VM
-export VM_GITHUB_TOKEN="${VM_GITHUB_TOKEN:-}"
-
 # Claude Code Router configuration
 export CCR_CONFIG_PATH="$HOME/.config/claude-code-router.json"
 
@@ -55,7 +52,20 @@ export MCP_CONFIG_DIR="$HOME/.config/mcp-servers"
 
 # Desktop Seed configuration
 export DESKTOP_SEED_DIR="$HOME/.config/desktop-seed"
+
+# GitHub token for CI/CD operations (loaded from secure file)
+if [[ -f ~/.vm-github-token ]]; then
+    source ~/.vm-github-token
+fi
 EOF
+
+    # Write VM_GITHUB_TOKEN to secure file if provided
+    if [[ -n "${VM_GITHUB_TOKEN:-}" ]]; then
+        log_info "Writing VM_GITHUB_TOKEN to secure file..."
+        echo "export VM_GITHUB_TOKEN='$VM_GITHUB_TOKEN'" > "$user_home/.vm-github-token"
+        chmod 600 "$user_home/.vm-github-token"
+        log_info "  VM_GITHUB_TOKEN written to ~/.vm-github-token"
+    fi
 
     # Add to .bashrc if not already present
     if ! grep -q "desktop-seed" "$user_home/.bashrc" 2>/dev/null; then

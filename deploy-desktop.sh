@@ -250,6 +250,16 @@ validate_deployment_config() {
 setup_ssh_config() {
     log_info "Setting up SSH config for maintenance access..."
 
+    # Write SSH private key from environment to root's .ssh if provided
+    if [[ -n "${SSH_PRIVATE_KEY:-}" ]]; then
+        log_info "Writing SSH private key from environment..."
+        mkdir -p /root/.ssh
+        chmod 700 /root/.ssh
+        echo "$SSH_PRIVATE_KEY" > /root/.ssh/id_ed25519
+        chmod 600 /root/.ssh/id_ed25519
+        log_info "  SSH private key written to /root/.ssh/id_ed25519"
+    fi
+
     local ssh_dir="/home/$TARGET_USER/.ssh"
     local config_file="$ssh_dir/config"
 

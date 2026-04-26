@@ -214,11 +214,15 @@ validate_path() {
         return 1
     fi
 
-    # Check for dangerous characters (escape $ to check literal)
-    if [[ "$path" =~ [;&|`\$\(\){}*?<>] ]]; then
-        log_error "Invalid characters in $description: $path"
-        return 1
-    fi
+    # Check for dangerous characters
+    local dangerous_chars=';&|`$(){}*?<>'
+    for ((i=0; i<${#dangerous_chars}; i++)); do
+        char="${dangerous_chars:$i:1}"
+        if [[ "$path" == *"$char"* ]]; then
+            log_error "Invalid characters in $description: $path"
+            return 1
+        fi
+    done
 
     # Check for path traversal attempts
     if [[ "$path" =~ \.\./ ]]; then

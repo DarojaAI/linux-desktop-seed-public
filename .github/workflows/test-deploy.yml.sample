@@ -1,0 +1,78 @@
+name: Test Deployment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_vm_ip:
+        description: 'Test VM IP Address'
+        required: true
+
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to .github/workflows/test-deploy.yml
+# 2. Add Repository Secret: SSH_KEY (base64-encoded private key)
+# 3. Create a test VM and provide its IP when running workflow
+# =============================================================================
+
+jobs:
+  validate-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate bash syntax
+        run: |
+          bash -n deploy-desktop.sh
+          echo "Script syntax is valid"
+
+      - name: Check required files exist
+        run: |
+          ls -la deploy-desktop.sh
+          ls -la etc/xrdp/startwm.sh
+          ls -la config.sh
+
+  deploy-and-test:
+    needs: validate-script
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          echo "${{ secrets.SSH_KEY }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "Host test-vm
+            HostName ${{ github.event.inputs.test_vm_ip }}
+            User root
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+      - name: Copy deployment script to VM
+        run: |
+          scp deploy-desktop.sh test-vm:/tmp/
+          scp -r etc test-vm:/tmp/
+          scp config.sh test-vm:/tmp/
+
+      - name: Run deployment
+        run: |
+          ssh test-vm "bash /tmp/deploy-desktop.sh"
+
+      - name: Validate xrdp service
+        run: |
+          ssh test-vm "systemctl status xrdp --no-pager"
+
+      - name: Validate startwm.sh
+        run: |
+          ssh test-vm "cat /etc/xrdp/startwm.sh | head -20"
+          ssh test-vm "test -x /etc/xrdp/startwm.sh && echo 'startwm.sh is executable'"
+
+      - name: Check GNOME components
+        run: |
+          ssh test-vm "command -v gnome-shell && echo 'gnome-shell found'"
+          ssh test-vm "command -v Xvnc && echo 'Xvnc found'"

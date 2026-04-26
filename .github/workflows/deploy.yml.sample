@@ -1,0 +1,215 @@
+# =============================================================================
+# Linux Desktop - Deploy to Hetzner via GitHub Actions (TEMPLATE)
+# =============================================================================
+# This is a TEMPLATE - copy to .github/workflows/deploy.yml and configure
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to .github/workflows/deploy.yml
+# 2. Add these Repository Secrets:
+#    - HETZNER_API_TOKEN     - Your Hetzner API token
+#    - SSH_PRIVATE_KEY       - Private SSH key for server access
+#    - HCX_ACCESS_KEY        - Hetzner Cloud S3 credentials
+#    - HCX_SECRET_KEY        - Hetzner Cloud S3 credentials
+# 3. Add these Repository Variables:
+#    - HCX_STORAGE_URL       - S3 endpoint URL
+#    - HETZNER_LOCATION      - Datacenter (fsn1, nbg1, hel1, etc.)
+#    - SERVER_TYPE           - Server type (cpx21, cpx41, etc.)
+#    - SERVER_NAME           - Your server name (e.g., my-desktop)
+#    - HETZNER_SSH_KEY_NAME  - SSH key name in Hetzner console
+# 4. Create a GitHub Environment (e.g., "production") and set its protection rules
+# =============================================================================
+
+name: Deploy Linux Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: '1.7'
+  TERRAFORM_DIR: 'terraform'
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Terraform Init
+        id: init
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform init -input=false \
+            -backend-config="endpoint=${{ vars.HCX_STORAGE_URL }}" \
+            -backend-config="access_key=${{ secrets.HCX_ACCESS_KEY }}" \
+            -backend-config="secret_key=${{ secrets.HCX_SECRET_KEY }}" \
+            -backend-config="skip_region_validation=true" \
+            -backend-config="skip_requesting_account_id=true"
+
+      - name: Terraform Plan
+        id: plan
+        if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply'
+        run: |
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
+          if [ -z "$SERVER_NAME" ]; then
+            echo "ERROR: SERVER_NAME variable is required. Set it in repo settings."
+            exit 1
+          fi
+          cd ${{ env.TERRAFORM_DIR }}
+          terraform plan -input=false \
+            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+            -var="server_name=$SERVER_NAME" \
+            -var="location=${{ vars.HETZNER_LOCATION }}" \
+            -var="server_type=${{ vars.SERVER_TYPE }}" \
+            -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
+            -var="hcx_access_key=${{ secrets.HCX_ACCESS_KEY }}" \
+            -var="hcx_secret_key=${{ secrets.HCX_SECRET_KEY }}"
+
+      - name: Terraform Apply
+        id: apply
+        if: github.event.inputs.action == 'apply'
+        run: |
+          SERVER_NAME="${{ vars.SERVER_NAME }}"
+          if [ -z "$SERVER_NAME" ]; then
+            echo "ERROR: SERVER_NAME variable is required."
+            exit 1
+          fi
+          cd ${{ env.TERRAFORM_DIR }}
+
+          sudo apt-get update && sudo apt-get install -y hcloud-cli
+          export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
+
+          SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r ".[] | select(.name == \"$SERVER_NAME\") | .id")
+          if [ -n "$SERVER_ID" ]; then
+            terraform import -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+              -var="server_name=$SERVER_NAME" \
+              -var="location=${{ vars.HETZNER_LOCATION }}" \
+              -var="server_type=${{ vars.SERVER_TYPE }}" \
+              -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
+              -var="hcx_access_key=${{ secrets.HCX_ACCESS_KEY }}" \
+              -var="hcx_secret_key=${{ secrets.HCX_SECRET_KEY }}" \
+              hcloud_server.main "$SERVER_ID" 2>&1 || true
+          fi
+
+          terraform apply -input=false -auto-approve \
+            -var="hcloud_token=${{ secrets.HETZNER_API_TOKEN }}" \
+            -var="server_name=$SERVER_NAME" \
+            -var="location=${{ vars.HETZNER_LOCATION }}" \
+            -var="server_type=${{ vars.SERVER_TYPE }}" \
+            -var="hetzner_ssh_key_name=${{ vars.HETZNER_SSH_KEY_NAME }}" \
+            -var="hcx_access_key=${{ secrets.HCX_ACCESS_KEY }}" \
+            -var="hcx_secret_key=${{ secrets.HCX_SECRET_KEY }}"
+
+      - name: Destroy server
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          sudo apt-get update && sudo apt-get install -y hcloud-cli
+          export HCLOUD_TOKEN=${{ secrets.HETZNER_API_TOKEN }}
+          SERVER_ID=$(hcloud server list -o json 2>/dev/null | jq -r '.[] | select(.name | startswith("linux-desktop-")) | .id' | head -1)
+          if [ -n "$SERVER_ID" ]; then
+            hcloud server delete "$SERVER_ID"
+          fi
+
+      - name: Set outputs
+        if: github.event.inputs.action == 'apply'
+        id: outputs
+        run: |
+          cd ${{ env.TERRAFORM_DIR }}
+          IP=$(terraform output -raw ipv4_address)
+          echo "server_ip=$IP" >> $GITHUB_OUTPUT
+          echo "${{ vars.SERVER_NAME }}" > server-name.txt
+          echo "$IP" > server-ip.txt
+
+      - name: Upload server info
+        if: github.event.inputs.action == 'apply'
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-info
+          path: |
+            ${{ env.TERRAFORM_DIR }}/server-ip.txt
+            ${{ env.TERRAFORM_DIR }}/server-name.txt
+
+  deploy:
+    name: Deploy Desktop
+    needs: terraform
+    if: github.event.inputs.action == 'apply'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download server info
+        uses: actions/download-artifact@v4
+        with:
+          name: server-info
+          path: ${{ env.TERRAFORM_DIR }}/
+
+      - name: Get server info
+        run: |
+          SERVER_NAME=$(cat ${{ env.TERRAFORM_DIR }}/server-name.txt)
+          IP=$(cat ${{ env.TERRAFORM_DIR }}/server-ip.txt)
+          echo "SERVER_NAME=$SERVER_NAME" >> $GITHUB_ENV
+          echo "SERVER_IP=$IP" >> $GITHUB_ENV
+
+      - name: Wait for server
+        run: |
+          for i in {1..30}; do
+            if nc -z -w5 ${{ env.SERVER_IP }} 22 2>/dev/null; then
+              echo "SSH ready"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Copy deployment script
+        run: |
+          scp -o StrictHostKeyChecking=no -r deploy-desktop.sh root@${{ env.SERVER_IP }}:/tmp/
+          scp -o StrictHostKeyChecking=no -r scripts root@${{ env.SERVER_IP }}:/tmp/
+
+      - name: Run deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
+            "cd /tmp && bash deploy-desktop.sh"
+
+      - name: Summary
+        run: |
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "**Server IP:** ${{ env.SERVER_IP }}" >> $GITHUB_STEP_SUMMARY
+          echo "**RDP:** ${{ env.SERVER_IP }}:3389" >> $GITHUB_STEP_SUMMARY

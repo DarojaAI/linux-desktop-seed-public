@@ -315,7 +315,8 @@ if not agent_exists:
         'name': repo_name,
         'model': 'openrouter/minimax/MiniMax-M2.7',
         'workspace': repo_dir,
-        'agentDir': f'{openclaw_dir}/agents/{repo_name}/agent'
+        'agentDir': f'{openclaw_dir}/agents/{repo_name}/agent',
+        'repoUrl': f'https://github.com/DarojaAI/{repo_name}.git'
     }
     config['agents']['list'].append(agent)
     print(f'Added agent: {repo_name}')

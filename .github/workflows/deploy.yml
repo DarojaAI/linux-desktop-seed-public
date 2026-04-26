@@ -9,7 +9,7 @@
 #   DISCORD_BOT_TOKEN          - Discord bot token for OpenCLAW
 #   OPENROUTER_API_KEY         - OpenRouter API key for Claude
 #   OPENCLAW_DISCORD_CHANNEL_ID - Discord channel ID for VM
-#   VM_GITHUB_TOKEN            - GitHub token (environment variable) for CI/CD from VM
+#   VM_GITHUB_TOKEN            - GitHub token (environment secret) for CI/CD from VM
 #
 # Required variables:
 #   HETZNER_LOCATION     - Datacenter (fsn1, nbg1, etc.)
@@ -260,7 +260,7 @@ jobs:
           OPENCLAW_DISCORD_CHANNEL_ID: ${{ vars.OPENCLAW_DISCORD_CHANNEL_ID }}
           OPENCLAW_DISCORD_ALLOWED_USER: ${{ vars.OPENCLAW_DISCORD_ALLOWED_USER }}
           OPENCLAW_DISCORD_GUILD_ID: ${{ vars.OPENCLAW_DISCORD_GUILD_ID }}
-          VM_GITHUB_TOKEN: ${{ vars.VM_GITHUB_TOKEN }}
+          VM_GITHUB_TOKEN: ${{ secrets.VM_GITHUB_TOKEN }}
         run: |
           ssh -o StrictHostKeyChecking=no root@${{ env.SERVER_IP }} \
             "export DISCORD_BOT_TOKEN='$DISCORD_BOT_TOKEN' && export OPENROUTER_API_KEY='$OPENROUTER_API_KEY' && export OPENCLAW_DISCORD_CHANNEL_ID='$OPENCLAW_DISCORD_CHANNEL_ID' && export OPENCLAW_DISCORD_ALLOWED_USER='$OPENCLAW_DISCORD_ALLOWED_USER' && export OPENCLAW_DISCORD_GUILD_ID='$OPENCLAW_DISCORD_GUILD_ID' && export VM_GITHUB_TOKEN='$VM_GITHUB_TOKEN' && cd /tmp && bash deploy-desktop.sh"

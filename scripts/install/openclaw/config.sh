@@ -356,6 +356,31 @@ if 'channels' in config and 'discord' in config.get('channels', {}):
 with open(config_file, 'w') as f:
     json.dump(config, f, indent=2)
 print('Config updated')
+
+# Create agent config.json file
+agent_config_file = f'{openclaw_dir}/agents/{repo_name}/agent/config.json'
+os.makedirs(f'{openclaw_dir}/agents/{repo_name}/agent', exist_ok=True)
+agent_config = {
+    'defaults': {
+        'model': 'minimax/MiniMax-M2.7',
+        'thinkingDefault': 'minimal',
+        'compaction': {
+            'mode': 'safeguard',
+            'reserveTokens': 15000,
+            'keepRecentTokens': 4000,
+            'reserveTokensFloor': 20000,
+            'maxHistoryShare': 0.1,
+            'model': 'anthropic/claude-haiku-4-5'
+        }
+    },
+    'workspace': {
+        'path': repo_dir,
+        'repoUrl': f'https://github.com/{repo_name}.git'
+    }
+}
+with open(agent_config_file, 'w') as f:
+    json.dump(agent_config, f, indent=2)
+print(f'Created agent config: {agent_config_file}')
 " || log_warn "Failed to update config"
 
     chown -R "$TARGET_USER:$TARGET_USER" "$openclaw_dir"

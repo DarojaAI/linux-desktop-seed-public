@@ -19,7 +19,7 @@
     "providers": {
       "openrouter": {
         "baseUrl": "https://openrouter.ai/api/v1",
-        "apiKey": "ENV_PLACEHOLDER",
+        "apiKey": "${OPENROUTER_API_KEY}",
         "api": "openai-completions",
         "injectNumCtxForOpenAICompat": true,
         "headers": {
@@ -179,8 +179,10 @@
       {
         "id": "linux-desktop-seed",
         "name": "linux-desktop-seed",
+        "model": "openrouter/minimax/MiniMax-M2.7",
         "workspace": "/home/desktopuser/Projects/linux-desktop-seed",
-        "agentDir": "/home/desktopuser/.openclaw/agents/linux-desktop-seed/agent"
+        "agentDir": "/home/desktopuser/.openclaw/agents/linux-desktop-seed/agent",
+        "repoUrl": "https://github.com/DarojaAI/linux-desktop-seed.git"
       },
       {
         "id": "core-business-management",
@@ -378,7 +380,7 @@
   "channels": {
     "discord": {
       "enabled": true,
-      "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
+      "token": "${DISCORD_BOT_TOKEN}",
       "groupPolicy": "allowlist",
       "streaming": {
         "mode": "off"

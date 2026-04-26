@@ -44,6 +44,9 @@ setup_environment() {
 # OpenRouter API (required for Claude Code)
 export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
 
+# GitHub token for CI/CD operations from VM
+export VM_GITHUB_TOKEN="${VM_GITHUB_TOKEN:-}"
+
 # Claude Code Router configuration
 export CCR_CONFIG_PATH="$HOME/.config/claude-code-router.json"
 

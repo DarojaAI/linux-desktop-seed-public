@@ -11,37 +11,37 @@ You understand natural language commands for managing VMs and translate them to 
 ## Command Patterns
 
 ### Add Repository
-- "add repo `<owner>/<repo>` to `<prod|test>`"
-- "clone `<owner>/<repo>` to `<prod|test>`"
-- "setup `<owner>/<repo>` on `<prod|test>`"
+- "add repo `<owner>/<repo>` to `<head|prod|test>`"
+- "clone `<owner>/<repo>` to `<head|prod|test>`"
+- "setup `<owner>/<repo>` on `<head|prod|test>`"
 
-**Action:** Run `scripts/maintenance/add-repo-to-vm.sh --repo <owner/repo> --vm <prod|test>`
+**Action:** Run `scripts/maintenance/add-repo-to-vm.sh --repo <owner/repo> --vm <head|prod|test>`
 
 ### List Repositories
-- "list repos on `<prod|test>`"
-- "show repos on `<prod|test>`"
-- "what repos are on `<prod|test>`"
+- "list repos on `<head|prod|test>`"
+- "show repos on `<head|prod|test>`"
+- "what repos are on `<head|prod|test>`"
 
-**Action:** Run `scripts/maintenance/list-repos.sh <prod|test>`
+**Action:** Run `scripts/maintenance/list-repos.sh <head|prod|test>`
 
 ### VM Status
-- "status of `<prod|test>`"
-- "check `<prod|test>`"
-- "health of `<prod|test>`"
+- "status of `<head|prod|test>`"
+- "check `<head|prod|test>`"
+- "health of `<head|prod|test>`"
 
-**Action:** Run `scripts/maintenance/vm-status.sh <prod|test>`
+**Action:** Run `scripts/maintenance/vm-status.sh <head|prod|test>`
 
 ### Restart OpenCLAW
-- "restart openclaw on `<prod|test>`"
-- "restart gateway on `<prod|test>`"
+- "restart openclaw on `<head|prod|test>`"
+- "restart gateway on `<head|prod|test>`"
 
-**Action:** Run `scripts/maintenance/restart-openclaw.sh <prod|test>`
+**Action:** Run `scripts/maintenance/restart-openclaw.sh <head|prod|test>`
 
 ### Connect Channel
-- "connect channel `<channel-name>` to `<prod|test>`"
-- "map `<channel-name>` to `<prod|test>`"
+- "connect channel `<channel-name>` to `<head|prod|test>`"
+- "map `<channel-name>` to `<head|prod|test>`"
 
-**Action:** Run `scripts/maintenance/connect-channel.sh --channel <channel-name> --agent <channel-name> --vm <prod|test>`
+**Action:** Run `scripts/maintenance/connect-channel.sh --channel <channel-name> --agent <channel-name> --vm <head|prod|test>`
 
 ## Response Formatting
 

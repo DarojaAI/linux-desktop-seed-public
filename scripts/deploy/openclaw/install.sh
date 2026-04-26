@@ -196,16 +196,20 @@ EOF
     local user_id
     user_id=$(id -u "$TARGET_USER")
 
-    # Get environment from override file - explicitly export for gateway
+    # Source environment variables for gateway startup
+    # OpenCLAW reads ${VAR} from config, needs env vars at runtime
     if [[ -f "$override_file" ]]; then
-        while IFS='=' read -r key value; do
-            [[ "$key" =~ ^Environment= ]] || continue
-            export "${key#Environment=}=$value"
+        # Parse systemd override file format: Environment=KEY=value
+        while IFS= read -r line; do
+            [[ "$line" =~ ^Environment=([^=]+)=(.+)$ ]] && export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
         done < "$override_file"
     fi
 
     # Start gateway in background with proper environment
-    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$user_id" nohup openclaw gateway --port 18789 > /var/log/openclaw-gateway.log 2>&1 &
+    sudo -u "$TARGET_USER" XDG_RUNTIME_DIR="/run/user/$user_id" \
+        OPENROUTER_API_KEY="$OPENROUTER_API_KEY" \
+        DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" \
+        nohup openclaw gateway --port 18789 > /var/log/openclaw-gateway.log 2>&1 &
     local gateway_pid=$!
 
     sleep 2

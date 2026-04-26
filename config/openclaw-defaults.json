@@ -2,13 +2,50 @@
   "$schema": "https://docs.openclaw.ai/schema.json",
   "meta": {
     "lastTouchedVersion": "2026.04.11",
-    "lastTouchedAt": "2026-04-07T22:00:00Z"
+    "lastTouchedAt": "2026-04-25T00:00:00Z"
+  },
+  "auth": {
+    "profiles": {
+      "openrouter:default": {
+        "provider": "openrouter",
+        "mode": "api_key"
+      }
+    }
   },
   "models": {
     "mode": "merge",
     "providers": {
       "openrouter": {
-        "apiKey": { "source": "env", "id": "OPENROUTER_API_KEY" }
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey": "${OPENROUTER_API_KEY}",
+        "api": "openai-completions",
+        "injectNumCtxForOpenAICompat": true,
+        "headers": {
+          "HTTP-Referer": "https://github.com/patelmm79/ubuntu-8gb-hel1-1",
+          "X-Title": "ubuntu-8gb-hel1-1"
+        },
+        "models": [
+          {
+            "id": "minimax/MiniMax-M2.7",
+            "name": "MiniMax-M2.7",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 100000,
+            "maxTokens": 8192
+          },
+          {
+            "id": "anthropic/claude-haiku-4-5",
+            "name": "Claude Haiku",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": ["text", "image"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
       }
     }
   },
@@ -62,7 +99,7 @@
   "channels": {
     "discord": {
       "enabled": true,
-      "token": "DISCORD_BOT_TOKEN_PLACEHOLDER",
+      "token": "${DISCORD_BOT_TOKEN}",
       "groupPolicy": "allowlist",
       "streaming": { "mode": "off" },
       "allowFrom": [],

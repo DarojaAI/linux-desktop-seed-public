@@ -22,22 +22,16 @@ setup_openclaw_config() {
 
     mkdir -p "$openclaw_dir/agents/main/agent"
 
-    # Check if we need to update config (new install, force flag, or Discord token present)
+    # Check if we need to update config (new install, force flag, or guilds missing)
     local should_update=false
-    local discord_token="${DISCORD_BOT_TOKEN:-}"
 
     if [[ ! -f "$config_file" ]]; then
         should_update=true
     elif [[ "${FORCE_OPENCLAW_CONFIG:-false}" == "true" ]]; then
         should_update=true
-    elif [[ -n "$discord_token" ]]; then
-        # Check if config lacks Discord section
-        if ! grep -q '"discord"' "$config_file" 2>/dev/null; then
-            should_update=true
-        fi
     fi
 
-    # Always update if channel ID is provided but config is outdated
+    # Always update if channel ID is provided but config lacks guilds structure
     if [[ -n "$discord_channel_id" && -f "$config_file" ]]; then
         if ! grep -q '"guilds"' "$config_file" 2>/dev/null; then
             should_update=true
@@ -45,31 +39,48 @@ setup_openclaw_config() {
         fi
     fi
 
-    # Update token if it's still a placeholder but we have a real token
-    if [[ -n "$discord_token" && -f "$config_file" ]]; then
-        if grep -q 'DISCORD_BOT_TOKEN_PLACEHOLDER\|DISCORD_BOT_TOKEN"' "$config_file" 2>/dev/null; then
+    # Update if config has plain tokens (not using ${VAR} env substitution)
+    if [[ -f "$config_file" ]]; then
+        if grep -qE '^[[:space:]]*"token":[[:space:]]*"[A-Z0-9]' "$config_file" 2>/dev/null && \
+           ! grep -qE '^[[:space:]]*"token":[[:space:]]*"\${' "$config_file" 2>/dev/null; then
             should_update=true
-            log_info "Config has placeholder token, will update"
+            log_info "Config uses plain tokens, will update to use env substitution"
         fi
     fi
 
     if [[ "$should_update" == "true" ]]; then
         local repo_config="$(dirname "$SCRIPT_DIR")/config/openclaw-defaults.json"
         if [[ -f "$repo_config" ]]; then
-            # Copy default config and replace token placeholder with actual token
+            # Copy default config (tokens are now env references)
             cp "$repo_config" "$config_file"
-            if [[ -n "$discord_token" ]]; then
-                sed -i "s/DISCORD_BOT_TOKEN_PLACEHOLDER/$discord_token/g" "$config_file"
-                log_info "Updated Discord token in config"
-            fi
-            log_info "Copied OpenCLAW default config"
+            log_info "Copied OpenCLAW default config with env-based token resolution"
         else
-            # Create config with token if available, otherwise use placeholder
-            local token_value="${discord_token:-DISCORD_BOT_TOKEN_PLACEHOLDER}"
-            cat > "$config_file" << EOF
+            # Create minimal config with env references
+            cat > "$config_file" << 'EOF'
 {
   "meta": {
     "lastTouchedVersion": "2026.04.11"
+  },
+  "auth": {
+    "profiles": {
+      "openrouter:default": {
+        "provider": "openrouter",
+        "mode": "api_key"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "openrouter": {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey": { "source": "env", "id": "OPENROUTER_API_KEY" },
+        "api": "openai-completions",
+        "models": [
+          { "id": "minimax/MiniMax-M2.7", "name": "MiniMax-M2.7", "api": "openai-completions" }
+        ]
+      }
+    }
   },
   "agents": {
     "defaults": {
@@ -80,7 +91,7 @@ setup_openclaw_config() {
   "channels": {
     "discord": {
       "enabled": true,
-      "token": "$token_value",
+      "token": "${DISCORD_BOT_TOKEN}",
       "groupPolicy": "allowlist",
       "streaming": { "mode": "off" },
       "allowFrom": [],
@@ -92,7 +103,7 @@ setup_openclaw_config() {
   }
 }
 EOF
-            log_info "Created minimal OpenCLAW config with Discord"
+            log_info "Created minimal OpenCLAW config with env-based token resolution"
         fi
     else
         log_info "OpenCLAW config already exists"

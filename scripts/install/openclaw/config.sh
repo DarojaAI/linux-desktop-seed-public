@@ -375,7 +375,7 @@ agent_config = {
     },
     'workspace': {
         'path': repo_dir,
-        'repoUrl': f'https://github.com/{repo_name}.git'
+        'repoUrl': f'https://github.com/DarojaAI/{repo_name}.git'
     }
 }
 with open(agent_config_file, 'w') as f:
